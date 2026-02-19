@@ -1,0 +1,285 @@
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
+import { User, UserDocument } from './schemas/user.schema';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { EmailService } from '../email/email.service';
+
+@Injectable()
+export class UsersService {
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private emailService: EmailService,
+  ) {}
+
+  private generateVerificationCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const { username, email, password } = createUserDto;
+
+    // Check if user already exists
+    const existingUser = await this.userModel.findOne({
+      $or: [{ email }, { username }],
+    });
+
+    if (existingUser) {
+      throw new ConflictException('Username or email already exists');
+    }
+
+    // Hash password (only for local auth)
+    const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
+
+    // Generate verification code
+    const verificationCode = this.generateVerificationCode();
+    const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    const user = new this.userModel({
+      username,
+      email,
+      passwordHash,
+      verificationCode,
+      verificationCodeExpires,
+      isEmailVerified: false,
+      provider: 'local',
+      statistics: {
+        totalPoints: 0,
+        level: 1,
+        currentStreak: 0,
+        xp: 0,
+        challengesCompleted: 0,
+        successRate: 0,
+        totalTimeCoding: 0,
+      },
+      profile: {},
+      achievements: [],
+      badges: [],
+    });
+
+    await user.save();
+
+    // Send verification email
+    try {
+      await this.emailService.sendVerificationEmail(email, verificationCode, username);
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      // Don't fail user creation if email fails
+    }
+
+    return user;
+  }
+
+  async verifyEmail(email: string, code: string): Promise<{ message: string; user: any }> {
+    const user = await this.userModel.findOne({ email });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    if (user.verificationCode !== code) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    if (!user.verificationCodeExpires || user.verificationCodeExpires < new Date()) {
+      throw new BadRequestException('Verification code expired');
+    }
+
+    user.isEmailVerified = true;
+    user.verificationCode = undefined;
+    user.verificationCodeExpires = undefined;
+    await user.save();
+
+    // Send welcome email
+    try {
+      await this.emailService.sendWelcomeEmail(email, user.username);
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
+    }
+
+    const { passwordHash, ...userResponse } = user.toObject();
+
+    return {
+      message: 'Email verified successfully',
+      user: userResponse,
+    };
+  }
+
+  async resendVerificationCode(email: string): Promise<{ message: string }> {
+    const user = await this.userModel.findOne({ email });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    const verificationCode = this.generateVerificationCode();
+    const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+
+    user.verificationCode = verificationCode;
+    user.verificationCodeExpires = verificationCodeExpires;
+    await user.save();
+
+    try {
+      await this.emailService.sendVerificationEmail(email, verificationCode, user.username);
+    } catch (error) {
+      console.error('Failed to resend verification email:', error);
+      throw new BadRequestException('Failed to send verification email');
+    }
+
+    return { message: 'Verification code sent successfully' };
+  }
+
+  async findAll(): Promise<User[]> {
+    return this.userModel.find().select('-passwordHash').exec();
+  }
+
+  async findOne(id: string): Promise<User> {
+    const user = await this.userModel.findById(id).select('-passwordHash').exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  async findByEmail(email: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ email }).exec();
+  }
+
+  async findByUsername(username: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ username }).exec();
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const updateData: any = {};
+
+    if (updateUserDto.username) updateData.username = updateUserDto.username;
+    if (updateUserDto.email) updateData.email = updateUserDto.email;
+    if (updateUserDto.password) {
+      updateData.passwordHash = await bcrypt.hash(updateUserDto.password, 10);
+    }
+
+    // Update profile fields
+    if (updateUserDto.avatar || updateUserDto.bio || updateUserDto.preferredLanguages) {
+      if (updateUserDto.avatar) updateData['profile.avatar'] = updateUserDto.avatar;
+      if (updateUserDto.bio) updateData['profile.bio'] = updateUserDto.bio;
+      if (updateUserDto.preferredLanguages) {
+        updateData['profile.preferredLanguages'] = updateUserDto.preferredLanguages;
+      }
+    }
+
+    const user = await this.userModel
+      .findByIdAndUpdate(id, updateData, { new: true })
+      .select('-passwordHash')
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  async remove(id: string): Promise<void> {
+    const result = await this.userModel.findByIdAndDelete(id).exec();
+    if (!result) {
+      throw new NotFoundException('User not found');
+    }
+  }
+
+  async updateStats(
+    id: string,
+    stats: {
+      totalPoints?: number;
+      level?: number;
+      currentStreak?: number;
+      xp?: number;
+      challengesCompleted?: number;
+      successRate?: number;
+      totalTimeCoding?: number;
+    },
+  ): Promise<User> {
+    const updateData: any = {};
+    
+    Object.keys(stats).forEach((key) => {
+      updateData[`statistics.${key}`] = stats[key];
+    });
+
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { $inc: updateData }, { new: true })
+      .select('-passwordHash')
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  async addAchievement(
+    id: string,
+    achievement: {
+      id: string;
+      name: string;
+      rarity: 'common' | 'rare' | 'epic' | 'legendary';
+    },
+  ): Promise<User> {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        {
+          $addToSet: {
+            achievements: {
+              ...achievement,
+              unlockedAt: new Date(),
+            },
+          },
+        },
+        { new: true },
+      )
+      .select('-passwordHash')
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  async addBadge(id: string, badge: string): Promise<User> {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        { $addToSet: { badges: badge } },
+        { new: true },
+      )
+      .select('-passwordHash')
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  async getLeaderboard(limit: number = 10): Promise<User[]> {
+    return this.userModel
+      .find()
+      .select('-passwordHash')
+      .sort({ 'statistics.totalPoints': -1 })
+      .limit(limit)
+      .exec();
+  }
+}
