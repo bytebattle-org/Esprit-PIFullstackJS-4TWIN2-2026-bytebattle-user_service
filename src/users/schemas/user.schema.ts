@@ -5,10 +5,10 @@ export type UserDocument = User & Document;
 
 @Schema({ timestamps: true })
 export class User extends Document {
-  @Prop({ required: true, unique: true, index: true })
+  @Prop({ required: true, unique: true })
   username: string;
 
-  @Prop({ required: true, unique: true, index: true })
+  @Prop({ required: true, unique: true })
   email: string;
 
   @Prop({ required: false })
@@ -42,7 +42,7 @@ export class User extends Document {
 
   @Prop({
     type: {
-      totalPoints: { type: Number, default: 0, index: true },
+      totalPoints: { type: Number, default: 0 },
       level: { type: Number, default: 1 },
       currentStreak: { type: Number, default: 0 },
       xp: { type: Number, default: 0 },
@@ -91,6 +91,12 @@ export class User extends Document {
 
   @Prop({ required: false })
   verificationCodeExpires?: Date;
+
+  @Prop({ required: false })
+  passwordResetToken?: string;
+
+  @Prop({ required: false })
+  passwordResetExpires?: Date;
 
   @Prop({ required: false })
   refreshToken?: string;

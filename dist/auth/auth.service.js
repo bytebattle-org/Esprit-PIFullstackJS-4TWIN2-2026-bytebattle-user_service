@@ -53,14 +53,17 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const bcrypt = __importStar(require("bcrypt"));
 const user_schema_1 = require("../users/schemas/user.schema");
+const email_service_1 = require("../email/email.service");
 let AuthService = class AuthService {
     userModel;
     jwtService;
     configService;
-    constructor(userModel, jwtService, configService) {
+    emailService;
+    constructor(userModel, jwtService, configService, emailService) {
         this.userModel = userModel;
         this.jwtService = jwtService;
         this.configService = configService;
+        this.emailService = emailService;
     }
     async validateUser(email, password) {
         const user = await this.userModel.findOne({ email });
@@ -143,9 +146,74 @@ let AuthService = class AuthService {
     }
     async logout(userId) {
         await this.userModel.findByIdAndUpdate(userId, {
-            refreshToken: null,
+            refreshToken: undefined,
         });
         return { message: 'Logged out successfully' };
+    }
+    async forgotPassword(email) {
+        const user = await this.userModel.findOne({ email });
+        if (!user) {
+            return { message: 'If an account with that email exists, a password reset link has been sent.' };
+        }
+        const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedToken = await bcrypt.hash(resetToken, 10);
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1);
+        user.passwordResetToken = hashedToken;
+        user.passwordResetExpires = expiresAt;
+        await user.save();
+        try {
+            await this.emailService.sendPasswordResetEmail(email, resetToken, user.username);
+        }
+        catch (error) {
+            console.error('Failed to send password reset email:', error);
+        }
+        if (this.configService.get('NODE_ENV') === 'development') {
+            return {
+                message: 'Password reset token generated',
+                resetToken,
+            };
+        }
+        return { message: 'If an account with that email exists, a password reset link has been sent.' };
+    }
+    async resetPassword(token, newPassword) {
+        const users = await this.userModel.find({
+            passwordResetExpires: { $gt: new Date() },
+        });
+        let matchedUser = null;
+        for (const user of users) {
+            if (user.passwordResetToken) {
+                const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
+                if (isTokenValid) {
+                    matchedUser = user;
+                    break;
+                }
+            }
+        }
+        if (!matchedUser) {
+            throw new common_1.BadRequestException('Invalid or expired reset token');
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        matchedUser.passwordHash = hashedPassword;
+        matchedUser.passwordResetToken = undefined;
+        matchedUser.passwordResetExpires = undefined;
+        matchedUser.refreshToken = undefined;
+        await matchedUser.save();
+        return { message: 'Password has been reset successfully' };
+    }
+    async verifyResetToken(token) {
+        const users = await this.userModel.find({
+            passwordResetExpires: { $gt: new Date() },
+        });
+        for (const user of users) {
+            if (user.passwordResetToken) {
+                const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
+                if (isTokenValid) {
+                    return { valid: true, email: user.email };
+                }
+            }
+        }
+        return { valid: false };
     }
 };
 exports.AuthService = AuthService;
@@ -154,6 +222,7 @@ exports.AuthService = AuthService = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(user_schema_1.User.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
         jwt_1.JwtService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        email_service_1.EmailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

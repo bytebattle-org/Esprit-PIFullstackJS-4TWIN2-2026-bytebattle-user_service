@@ -2,11 +2,13 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
 import { UserDocument } from '../users/schemas/user.schema';
+import { EmailService } from '../email/email.service';
 export declare class AuthService {
     private userModel;
     private jwtService;
     private configService;
-    constructor(userModel: Model<UserDocument>, jwtService: JwtService, configService: ConfigService);
+    private emailService;
+    constructor(userModel: Model<UserDocument>, jwtService: JwtService, configService: ConfigService, emailService: EmailService);
     validateUser(email: string, password: string): Promise<any>;
     login(user: any): Promise<{
         accessToken: string;
@@ -26,5 +28,16 @@ export declare class AuthService {
     }>;
     logout(userId: string): Promise<{
         message: string;
+    }>;
+    forgotPassword(email: string): Promise<{
+        message: string;
+        resetToken?: string;
+    }>;
+    resetPassword(token: string, newPassword: string): Promise<{
+        message: string;
+    }>;
+    verifyResetToken(token: string): Promise<{
+        valid: boolean;
+        email?: string;
     }>;
 }

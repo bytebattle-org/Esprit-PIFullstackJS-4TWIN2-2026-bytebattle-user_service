@@ -27,6 +27,8 @@ let User = class User extends mongoose_2.Document {
     isEmailVerified;
     verificationCode;
     verificationCodeExpires;
+    passwordResetToken;
+    passwordResetExpires;
     refreshToken;
     webauthnCredentials;
     currentChallenge;
@@ -35,11 +37,11 @@ let User = class User extends mongoose_2.Document {
 };
 exports.User = User;
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, unique: true, index: true }),
+    (0, mongoose_1.Prop)({ required: true, unique: true }),
     __metadata("design:type", String)
 ], User.prototype, "username", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, unique: true, index: true }),
+    (0, mongoose_1.Prop)({ required: true, unique: true }),
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
 __decorate([
@@ -76,7 +78,7 @@ __decorate([
 __decorate([
     (0, mongoose_1.Prop)({
         type: {
-            totalPoints: { type: Number, default: 0, index: true },
+            totalPoints: { type: Number, default: 0 },
             level: { type: Number, default: 1 },
             currentStreak: { type: Number, default: 0 },
             xp: { type: Number, default: 0 },
@@ -118,6 +120,14 @@ __decorate([
     (0, mongoose_1.Prop)({ required: false }),
     __metadata("design:type", Date)
 ], User.prototype, "verificationCodeExpires", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false }),
+    __metadata("design:type", String)
+], User.prototype, "passwordResetToken", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false }),
+    __metadata("design:type", Date)
+], User.prototype, "passwordResetExpires", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: false }),
     __metadata("design:type", String)

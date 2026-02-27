@@ -49,6 +49,8 @@ export declare class WebAuthnService {
         isEmailVerified: boolean;
         verificationCode?: string;
         verificationCodeExpires?: Date;
+        passwordResetToken?: string;
+        passwordResetExpires?: Date;
         webauthnCredentials: Array<{
             credentialId: string;
             credentialPublicKey: string;

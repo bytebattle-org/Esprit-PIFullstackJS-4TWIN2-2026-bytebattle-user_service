@@ -5,6 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from '../users/schemas/user.schema';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +13,7 @@ export class AuthService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -119,9 +121,101 @@ export class AuthService {
 
   async logout(userId: string) {
     await this.userModel.findByIdAndUpdate(userId, {
-      refreshToken: null,
+      refreshToken: undefined,
     });
     return { message: 'Logged out successfully' };
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string; resetToken?: string }> {
+    const user = await this.userModel.findOne({ email });
+
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return { message: 'If an account with that email exists, a password reset link has been sent.' };
+    }
+
+    // Generate reset token (6-digit code)
+    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedToken = await bcrypt.hash(resetToken, 10);
+
+    // Token expires in 1 hour
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = expiresAt;
+    await user.save();
+
+    // Send email with reset token
+    try {
+      await this.emailService.sendPasswordResetEmail(email, resetToken, user.username);
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+      // Continue even if email fails - user can still use the token if returned in dev mode
+    }
+
+    // In development, return the token. In production, don't return it
+    if (this.configService.get('NODE_ENV') === 'development') {
+      return {
+        message: 'Password reset token generated',
+        resetToken, // Only for development
+      };
+    }
+
+    return { message: 'If an account with that email exists, a password reset link has been sent.' };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    // Find users with non-expired reset tokens
+    const users = await this.userModel.find({
+      passwordResetExpires: { $gt: new Date() },
+    });
+
+    let matchedUser: UserDocument | null = null;
+
+    // Check token against all users with valid expiry
+    for (const user of users) {
+      if (user.passwordResetToken) {
+        const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
+        if (isTokenValid) {
+          matchedUser = user;
+          break;
+        }
+      }
+    }
+
+    if (!matchedUser) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear reset token
+    matchedUser.passwordHash = hashedPassword;
+    matchedUser.passwordResetToken = undefined;
+    matchedUser.passwordResetExpires = undefined;
+    matchedUser.refreshToken = undefined;
+    await matchedUser.save();
+
+    return { message: 'Password has been reset successfully' };
+  }
+
+  async verifyResetToken(token: string): Promise<{ valid: boolean; email?: string }> {
+    const users = await this.userModel.find({
+      passwordResetExpires: { $gt: new Date() },
+    });
+
+    for (const user of users) {
+      if (user.passwordResetToken) {
+        const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
+        if (isTokenValid) {
+          return { valid: true, email: user.email };
+        }
+      }
+    }
+
+    return { valid: false };
   }
 
   // ============================================================================

@@ -18,6 +18,7 @@ const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const jwt_refresh_strategy_1 = require("./strategies/jwt-refresh.strategy");
 const webauthn_service_1 = require("./webauthn/webauthn.service");
 const webauthn_controller_1 = require("./webauthn/webauthn.controller");
+const email_module_1 = require("../email/email.module");
 const user_schema_1 = require("../users/schemas/user.schema");
 let AuthModule = class AuthModule {
 };
@@ -35,6 +36,7 @@ exports.AuthModule = AuthModule = __decorate([
                 inject: [config_1.ConfigService],
             }),
             mongoose_1.MongooseModule.forFeature([{ name: user_schema_1.User.name, schema: user_schema_1.UserSchema }]),
+            email_module_1.EmailModule,
         ],
         controllers: [auth_controller_1.AuthController, webauthn_controller_1.WebAuthnController],
         providers: [

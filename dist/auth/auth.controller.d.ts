@@ -25,4 +25,15 @@ export declare class AuthController {
         message: string;
     }>;
     getProfile(req: any): Promise<any>;
+    forgotPassword(email: string): Promise<{
+        message: string;
+        resetToken?: string;
+    }>;
+    resetPassword(token: string, newPassword: string): Promise<{
+        message: string;
+    }>;
+    verifyResetToken(token: string): Promise<{
+        valid: boolean;
+        email?: string;
+    }>;
 }

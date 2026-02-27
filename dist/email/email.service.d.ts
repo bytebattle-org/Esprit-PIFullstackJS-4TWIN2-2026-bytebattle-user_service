@@ -5,4 +5,5 @@ export declare class EmailService {
     constructor(configService: ConfigService);
     sendVerificationEmail(email: string, code: string, username: string): Promise<void>;
     sendWelcomeEmail(email: string, username: string): Promise<void>;
+    sendPasswordResetEmail(email: string, resetToken: string, username: string): Promise<void>;
 }

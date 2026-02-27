@@ -9,6 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { WebAuthnService } from './webauthn/webauthn.service';
 import { WebAuthnController } from './webauthn/webauthn.controller';
+import { EmailModule } from '../email/email.module';
 // import { GoogleStrategy } from './strategies/google.strategy';  // Uncomment for OAuth
 // import { GithubStrategy } from './strategies/github.strategy';  // Uncomment for OAuth
 import { User, UserSchema } from '../users/schemas/user.schema';
@@ -25,6 +26,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
       inject: [ConfigService],
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    EmailModule,
   ],
   controllers: [AuthController, WebAuthnController],
   providers: [
