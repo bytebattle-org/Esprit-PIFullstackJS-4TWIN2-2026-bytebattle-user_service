@@ -95,6 +95,30 @@ export class User extends Document {
   @Prop({ required: false })
   refreshToken?: string;
 
+  // WebAuthn credentials for Face ID / Touch ID / Fingerprint
+  @Prop({
+    type: [
+      {
+        credentialId: String,
+        credentialPublicKey: String,
+        counter: Number,
+        transports: [String],
+        createdAt: Date,
+      },
+    ],
+    default: [],
+  })
+  webauthnCredentials: Array<{
+    credentialId: string;
+    credentialPublicKey: string;
+    counter: number;
+    transports?: string[];
+    createdAt: Date;
+  }>;
+
+  @Prop({ required: false })
+  currentChallenge?: string;
+
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 

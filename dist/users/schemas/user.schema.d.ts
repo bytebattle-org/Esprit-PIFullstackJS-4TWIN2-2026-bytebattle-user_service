@@ -33,6 +33,14 @@ export declare class User extends Document {
     verificationCode?: string;
     verificationCodeExpires?: Date;
     refreshToken?: string;
+    webauthnCredentials: Array<{
+        credentialId: string;
+        credentialPublicKey: string;
+        counter: number;
+        transports?: string[];
+        createdAt: Date;
+    }>;
+    currentChallenge?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -217,6 +225,30 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
         id: string;
     }> | undefined;
     createdAt?: import("mongoose").SchemaDefinitionProperty<Date, User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    webauthnCredentials?: import("mongoose").SchemaDefinitionProperty<{
+        credentialId: string;
+        credentialPublicKey: string;
+        counter: number;
+        transports?: string[];
+        createdAt: Date;
+    }[], User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    currentChallenge?: import("mongoose").SchemaDefinitionProperty<string | undefined, User, Document<unknown, {}, User, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
         _id: import("mongoose").Types.ObjectId;

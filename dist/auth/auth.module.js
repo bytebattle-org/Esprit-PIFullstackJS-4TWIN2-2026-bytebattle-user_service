@@ -16,6 +16,8 @@ const auth_service_1 = require("./auth.service");
 const auth_controller_1 = require("./auth.controller");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const jwt_refresh_strategy_1 = require("./strategies/jwt-refresh.strategy");
+const webauthn_service_1 = require("./webauthn/webauthn.service");
+const webauthn_controller_1 = require("./webauthn/webauthn.controller");
 const user_schema_1 = require("../users/schemas/user.schema");
 let AuthModule = class AuthModule {
 };
@@ -34,13 +36,14 @@ exports.AuthModule = AuthModule = __decorate([
             }),
             mongoose_1.MongooseModule.forFeature([{ name: user_schema_1.User.name, schema: user_schema_1.UserSchema }]),
         ],
-        controllers: [auth_controller_1.AuthController],
+        controllers: [auth_controller_1.AuthController, webauthn_controller_1.WebAuthnController],
         providers: [
             auth_service_1.AuthService,
             jwt_strategy_1.JwtStrategy,
             jwt_refresh_strategy_1.JwtRefreshStrategy,
+            webauthn_service_1.WebAuthnService,
         ],
-        exports: [auth_service_1.AuthService],
+        exports: [auth_service_1.AuthService, webauthn_service_1.WebAuthnService],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

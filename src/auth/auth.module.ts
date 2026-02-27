@@ -7,6 +7,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { WebAuthnService } from './webauthn/webauthn.service';
+import { WebAuthnController } from './webauthn/webauthn.controller';
 // import { GoogleStrategy } from './strategies/google.strategy';  // Uncomment for OAuth
 // import { GithubStrategy } from './strategies/github.strategy';  // Uncomment for OAuth
 import { User, UserSchema } from '../users/schemas/user.schema';
@@ -24,14 +26,15 @@ import { User, UserSchema } from '../users/schemas/user.schema';
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, WebAuthnController],
   providers: [
     AuthService,
     JwtStrategy,
     JwtRefreshStrategy,
+    WebAuthnService,
     // GoogleStrategy,  // Uncomment for OAuth
     // GithubStrategy,  // Uncomment for OAuth
   ],
-  exports: [AuthService],
+  exports: [AuthService, WebAuthnService],
 })
 export class AuthModule {}
