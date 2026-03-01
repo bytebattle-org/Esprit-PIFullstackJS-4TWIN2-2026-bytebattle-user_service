@@ -32,6 +32,18 @@ let AuthController = class AuthController {
         const user = await this.authService.validateUser(loginDto.email, loginDto.password);
         return this.authService.login(user);
     }
+    async loginWith2FA(userId, token) {
+        const response = await fetch(`http://localhost:${process.env.PORT || 3001}/auth/2fa/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, token }),
+        });
+        const result = await response.json();
+        if (!result.verified) {
+            throw new common_1.UnauthorizedException('Invalid 2FA code');
+        }
+        return this.authService.loginWith2FA(userId);
+    }
     async refresh(req) {
         return this.authService.refreshTokens(req.user.userId, req.user.refreshToken);
     }
@@ -54,18 +66,18 @@ let AuthController = class AuthController {
     }
     async googleAuthCallback(req, res) {
         const user = await this.authService.validateOAuthUser(req.user);
-        const tokens = await this.authService.login(user);
+        const result = await this.authService.loginWithOAuth(user);
         const frontendUrl = this.configService.get('FRONTEND_URL');
-        const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+        const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`;
         return res.redirect(redirectUrl);
     }
     async githubAuth() {
     }
     async githubAuthCallback(req, res) {
         const user = await this.authService.validateOAuthUser(req.user);
-        const tokens = await this.authService.login(user);
+        const result = await this.authService.loginWithOAuth(user);
         const frontendUrl = this.configService.get('FRONTEND_URL');
-        const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+        const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`;
         return res.redirect(redirectUrl);
     }
 };
@@ -77,6 +89,14 @@ __decorate([
     __metadata("design:paramtypes", [login_dto_1.LoginDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('login-2fa'),
+    __param(0, (0, common_1.Body)('userId')),
+    __param(1, (0, common_1.Body)('token')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "loginWith2FA", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_refresh_auth_guard_1.JwtRefreshAuthGuard),
     (0, common_1.Post)('refresh'),

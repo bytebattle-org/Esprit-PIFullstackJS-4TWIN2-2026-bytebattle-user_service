@@ -21,7 +21,36 @@ export declare class AuthService {
             profile: any;
             statistics: any;
         };
+    } | {
+        requiresTwoFactor: boolean;
+        userId: any;
+        message: string;
     }>;
+    loginWith2FA(userId: string): Promise<{
+        accessToken: string;
+        refreshToken: string;
+        user: {
+            id: any;
+            username: any;
+            email: any;
+            role: any;
+            profile: any;
+            statistics: any;
+        };
+    }>;
+    loginWithOAuth(user: any): Promise<{
+        accessToken: string;
+        refreshToken: string;
+        user: {
+            id: any;
+            username: any;
+            email: any;
+            role: any;
+            profile: any;
+            statistics: any;
+        };
+    }>;
+    private generateTokens;
     refreshTokens(userId: string, refreshToken: string): Promise<{
         accessToken: string;
         refreshToken: string;

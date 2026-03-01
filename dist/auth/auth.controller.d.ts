@@ -17,6 +17,22 @@ export declare class AuthController {
             profile: any;
             statistics: any;
         };
+    } | {
+        requiresTwoFactor: boolean;
+        userId: any;
+        message: string;
+    }>;
+    loginWith2FA(userId: string, token: string): Promise<{
+        accessToken: string;
+        refreshToken: string;
+        user: {
+            id: any;
+            username: any;
+            email: any;
+            role: any;
+            profile: any;
+            statistics: any;
+        };
     }>;
     refresh(req: any): Promise<{
         accessToken: string;

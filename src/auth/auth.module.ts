@@ -13,6 +13,8 @@ import { EmailModule } from '../email/email.module';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
 import { User, UserSchema } from '../users/schemas/user.schema';
+import { TwoFactorService } from './two-factor/two-factor.service';
+import { TwoFactorController } from './two-factor/two-factor.controller';
 
 @Module({
   imports: [
@@ -28,7 +30,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     EmailModule,
   ],
-  controllers: [AuthController, WebAuthnController],
+  controllers: [AuthController, WebAuthnController, TwoFactorController],
   providers: [
     AuthService,
     JwtStrategy,
@@ -36,7 +38,8 @@ import { User, UserSchema } from '../users/schemas/user.schema';
     WebAuthnService,
     GoogleStrategy,
     GithubStrategy,
+    TwoFactorService,
   ],
-  exports: [AuthService, WebAuthnService],
+  exports: [AuthService, WebAuthnService, TwoFactorService],
 })
 export class AuthModule {}

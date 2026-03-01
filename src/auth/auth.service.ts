@@ -38,6 +38,35 @@ export class AuthService {
   }
 
   async login(user: any) {
+    // Check if 2FA is enabled
+    if (user.isTwoFactorEnabled) {
+      return {
+        requiresTwoFactor: true,
+        userId: user._id.toString(),
+        message: 'Please enter your 2FA code',
+      };
+    }
+
+    return this.generateTokens(user);
+  }
+
+  async loginWith2FA(userId: string) {
+    const user = await this.userModel.findById(userId);
+    
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.generateTokens(user);
+  }
+
+  async loginWithOAuth(user: any) {
+    // OAuth providers (Google, GitHub) have their own 2FA
+    // So we bypass our 2FA for OAuth logins
+    return this.generateTokens(user);
+  }
+
+  private async generateTokens(user: any) {
     const payload = { 
       email: user.email, 
       sub: user._id,

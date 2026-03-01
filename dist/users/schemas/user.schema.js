@@ -32,6 +32,9 @@ let User = class User extends mongoose_2.Document {
     refreshToken;
     webauthnCredentials;
     currentChallenge;
+    twoFactorSecret;
+    isTwoFactorEnabled;
+    twoFactorRecoveryCodes;
     createdAt;
     updatedAt;
 };
@@ -151,6 +154,18 @@ __decorate([
     (0, mongoose_1.Prop)({ required: false }),
     __metadata("design:type", String)
 ], User.prototype, "currentChallenge", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false }),
+    __metadata("design:type", String)
+], User.prototype, "twoFactorSecret", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isTwoFactorEnabled", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: [String], default: [] }),
+    __metadata("design:type", Array)
+], User.prototype, "twoFactorRecoveryCodes", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Date, default: Date.now }),
     __metadata("design:type", Date)

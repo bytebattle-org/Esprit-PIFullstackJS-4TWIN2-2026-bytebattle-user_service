@@ -27,6 +27,10 @@ export declare class WebAuthnController {
             profile: any;
             statistics: any;
         };
+    } | {
+        requiresTwoFactor: boolean;
+        userId: any;
+        message: string;
     }>;
     removeCredential(req: any, credentialId: string): Promise<{
         message: string;

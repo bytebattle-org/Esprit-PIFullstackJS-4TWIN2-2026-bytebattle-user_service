@@ -7,6 +7,7 @@ import {
   Get,
   Res,
   ValidationPipe,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -31,6 +32,27 @@ export class AuthController {
       loginDto.password,
     );
     return this.authService.login(user);
+  }
+
+  @Post('login-2fa')
+  async loginWith2FA(
+    @Body('userId') userId: string,
+    @Body('token') token: string,
+  ) {
+    // Verify the 2FA token first
+    const response = await fetch(`http://localhost:${process.env.PORT || 3001}/auth/2fa/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, token }),
+    });
+    
+    const result = await response.json();
+    
+    if (!result.verified) {
+      throw new UnauthorizedException('Invalid 2FA code');
+    }
+
+    return this.authService.loginWith2FA(userId);
   }
 
   @UseGuards(JwtRefreshAuthGuard)
@@ -84,11 +106,13 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   async googleAuthCallback(@Request() req, @Res() res: Response) {
     const user = await this.authService.validateOAuthUser(req.user);
-    const tokens = await this.authService.login(user);
     
-    // Redirect to frontend with tokens
+    // For OAuth users, automatically disable 2FA since OAuth providers have their own security
+    // This allows seamless OAuth login even if user previously had 2FA enabled
+    const result = await this.authService.loginWithOAuth(user);
+    
     const frontendUrl = this.configService.get('FRONTEND_URL');
-    const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+    const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`;
     
     return res.redirect(redirectUrl);
   }
@@ -104,11 +128,13 @@ export class AuthController {
   @UseGuards(GithubAuthGuard)
   async githubAuthCallback(@Request() req, @Res() res: Response) {
     const user = await this.authService.validateOAuthUser(req.user);
-    const tokens = await this.authService.login(user);
     
-    // Redirect to frontend with tokens
+    // For OAuth users, automatically disable 2FA since OAuth providers have their own security
+    // This allows seamless OAuth login even if user previously had 2FA enabled
+    const result = await this.authService.loginWithOAuth(user);
+    
     const frontendUrl = this.configService.get('FRONTEND_URL');
-    const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+    const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`;
     
     return res.redirect(redirectUrl);
   }

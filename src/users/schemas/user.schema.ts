@@ -125,6 +125,16 @@ export class User extends Document {
   @Prop({ required: false })
   currentChallenge?: string;
 
+  // Two-Factor Authentication (TOTP)
+  @Prop({ required: false })
+  twoFactorSecret?: string;
+
+  @Prop({ default: false })
+  isTwoFactorEnabled: boolean;
+
+  @Prop({ type: [String], default: [] })
+  twoFactorRecoveryCodes: string[];
+
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 

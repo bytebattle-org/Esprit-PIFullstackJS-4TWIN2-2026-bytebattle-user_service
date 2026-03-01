@@ -81,6 +81,26 @@ let AuthService = class AuthService {
         return result;
     }
     async login(user) {
+        if (user.isTwoFactorEnabled) {
+            return {
+                requiresTwoFactor: true,
+                userId: user._id.toString(),
+                message: 'Please enter your 2FA code',
+            };
+        }
+        return this.generateTokens(user);
+    }
+    async loginWith2FA(userId) {
+        const user = await this.userModel.findById(userId);
+        if (!user) {
+            throw new common_1.UnauthorizedException('User not found');
+        }
+        return this.generateTokens(user);
+    }
+    async loginWithOAuth(user) {
+        return this.generateTokens(user);
+    }
+    async generateTokens(user) {
         const payload = {
             email: user.email,
             sub: user._id,

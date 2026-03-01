@@ -22,6 +22,8 @@ const email_module_1 = require("../email/email.module");
 const google_strategy_1 = require("./strategies/google.strategy");
 const github_strategy_1 = require("./strategies/github.strategy");
 const user_schema_1 = require("../users/schemas/user.schema");
+const two_factor_service_1 = require("./two-factor/two-factor.service");
+const two_factor_controller_1 = require("./two-factor/two-factor.controller");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -40,7 +42,7 @@ exports.AuthModule = AuthModule = __decorate([
             mongoose_1.MongooseModule.forFeature([{ name: user_schema_1.User.name, schema: user_schema_1.UserSchema }]),
             email_module_1.EmailModule,
         ],
-        controllers: [auth_controller_1.AuthController, webauthn_controller_1.WebAuthnController],
+        controllers: [auth_controller_1.AuthController, webauthn_controller_1.WebAuthnController, two_factor_controller_1.TwoFactorController],
         providers: [
             auth_service_1.AuthService,
             jwt_strategy_1.JwtStrategy,
@@ -48,8 +50,9 @@ exports.AuthModule = AuthModule = __decorate([
             webauthn_service_1.WebAuthnService,
             google_strategy_1.GoogleStrategy,
             github_strategy_1.GithubStrategy,
+            two_factor_service_1.TwoFactorService,
         ],
-        exports: [auth_service_1.AuthService, webauthn_service_1.WebAuthnService],
+        exports: [auth_service_1.AuthService, webauthn_service_1.WebAuthnService, two_factor_service_1.TwoFactorService],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

@@ -43,6 +43,9 @@ export declare class User extends Document {
         createdAt: Date;
     }>;
     currentChallenge?: string;
+    twoFactorSecret?: string;
+    isTwoFactorEnabled: boolean;
+    twoFactorRecoveryCodes: string[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -269,6 +272,33 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
         id: string;
     }> | undefined;
     currentChallenge?: import("mongoose").SchemaDefinitionProperty<string | undefined, User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    twoFactorSecret?: import("mongoose").SchemaDefinitionProperty<string | undefined, User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    isTwoFactorEnabled?: import("mongoose").SchemaDefinitionProperty<boolean, User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    twoFactorRecoveryCodes?: import("mongoose").SchemaDefinitionProperty<string[], User, Document<unknown, {}, User, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
         _id: import("mongoose").Types.ObjectId;

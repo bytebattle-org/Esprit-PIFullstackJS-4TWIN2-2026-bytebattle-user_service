@@ -58,6 +58,9 @@ export declare class WebAuthnService {
             transports?: string[];
             createdAt: Date;
         }>;
+        twoFactorSecret?: string;
+        isTwoFactorEnabled: boolean;
+        twoFactorRecoveryCodes: string[];
         createdAt: Date;
         updatedAt: Date;
         _id: import("mongoose").Types.ObjectId;
