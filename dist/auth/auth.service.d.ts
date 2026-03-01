@@ -40,4 +40,6 @@ export declare class AuthService {
         valid: boolean;
         email?: string;
     }>;
+    validateOAuthUser(profile: any): Promise<any>;
+    private generateUniqueUsername;
 }

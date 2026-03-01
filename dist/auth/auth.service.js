@@ -153,7 +153,7 @@ let AuthService = class AuthService {
     async forgotPassword(email) {
         const user = await this.userModel.findOne({ email });
         if (!user) {
-            return { message: 'If an account with that email exists, a password reset link has been sent.' };
+            throw new common_1.BadRequestException('No account found with this email address');
         }
         const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedToken = await bcrypt.hash(resetToken, 10);
@@ -170,11 +170,11 @@ let AuthService = class AuthService {
         }
         if (this.configService.get('NODE_ENV') === 'development') {
             return {
-                message: 'Password reset token generated',
+                message: 'Password reset code sent to your email',
                 resetToken,
             };
         }
-        return { message: 'If an account with that email exists, a password reset link has been sent.' };
+        return { message: 'Password reset code sent to your email' };
     }
     async resetPassword(token, newPassword) {
         const users = await this.userModel.find({
@@ -214,6 +214,68 @@ let AuthService = class AuthService {
             }
         }
         return { valid: false };
+    }
+    async validateOAuthUser(profile) {
+        const { email, providerId, provider, username, avatar } = profile;
+        let user = await this.userModel.findOne({
+            providerId,
+            provider,
+        });
+        if (user) {
+            user.updatedAt = new Date();
+            if (avatar && !user.profile.avatar) {
+                user.profile.avatar = avatar;
+            }
+            await user.save();
+        }
+        else {
+            const existingUser = await this.userModel.findOne({ email });
+            if (existingUser) {
+                existingUser.providerId = providerId;
+                existingUser.provider = provider;
+                if (avatar && !existingUser.profile.avatar) {
+                    existingUser.profile.avatar = avatar;
+                }
+                await existingUser.save();
+                user = existingUser;
+            }
+            else {
+                user = new this.userModel({
+                    email,
+                    username: await this.generateUniqueUsername(username),
+                    providerId,
+                    provider,
+                    providerAvatar: avatar,
+                    isEmailVerified: true,
+                    profile: {
+                        avatar: avatar,
+                    },
+                    statistics: {
+                        totalPoints: 0,
+                        level: 1,
+                        currentStreak: 0,
+                        xp: 0,
+                        challengesCompleted: 0,
+                        successRate: 0,
+                        totalTimeCoding: 0,
+                    },
+                    achievements: [],
+                    badges: [],
+                });
+                await user.save();
+            }
+        }
+        const { passwordHash, refreshToken, ...result } = user.toObject();
+        return result;
+    }
+    async generateUniqueUsername(baseUsername) {
+        let username = baseUsername;
+        let counter = 1;
+        while (await this.userModel.findOne({ username })) {
+            username = `${baseUsername}${counter}`;
+            counter++;
+        }
+        return username;
     }
 };
 exports.AuthService = AuthService;

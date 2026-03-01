@@ -10,8 +10,8 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { WebAuthnService } from './webauthn/webauthn.service';
 import { WebAuthnController } from './webauthn/webauthn.controller';
 import { EmailModule } from '../email/email.module';
-// import { GoogleStrategy } from './strategies/google.strategy';  // Uncomment for OAuth
-// import { GithubStrategy } from './strategies/github.strategy';  // Uncomment for OAuth
+import { GoogleStrategy } from './strategies/google.strategy';
+import { GithubStrategy } from './strategies/github.strategy';
 import { User, UserSchema } from '../users/schemas/user.schema';
 
 @Module({
@@ -34,8 +34,8 @@ import { User, UserSchema } from '../users/schemas/user.schema';
     JwtStrategy,
     JwtRefreshStrategy,
     WebAuthnService,
-    // GoogleStrategy,  // Uncomment for OAuth
-    // GithubStrategy,  // Uncomment for OAuth
+    GoogleStrategy,
+    GithubStrategy,
   ],
   exports: [AuthService, WebAuthnService],
 })

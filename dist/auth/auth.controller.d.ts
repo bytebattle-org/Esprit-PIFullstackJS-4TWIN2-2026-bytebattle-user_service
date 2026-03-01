@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
@@ -36,4 +37,8 @@ export declare class AuthController {
         valid: boolean;
         email?: string;
     }>;
+    googleAuth(): Promise<void>;
+    googleAuthCallback(req: any, res: Response): Promise<void>;
+    githubAuth(): Promise<void>;
+    githubAuthCallback(req: any, res: Response): Promise<void>;
 }

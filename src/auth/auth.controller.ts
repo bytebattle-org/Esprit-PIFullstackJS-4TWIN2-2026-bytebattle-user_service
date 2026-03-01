@@ -4,17 +4,17 @@ import {
   Body,
   UseGuards,
   Request,
-  // Get,  // Uncomment for OAuth
-  // Res,  // Uncomment for OAuth
+  Get,
+  Res,
   ValidationPipe,
 } from '@nestjs/common';
-// import { Response } from 'express';  // Uncomment for OAuth
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-// import { GoogleAuthGuard } from './guards/google-auth.guard';  // Uncomment for OAuth
-// import { GithubAuthGuard } from './guards/github-auth.guard';  // Uncomment for OAuth
+import { GoogleAuthGuard } from './guards/google-auth.guard';
+import { GithubAuthGuard } from './guards/github-auth.guard';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
@@ -70,18 +70,9 @@ export class AuthController {
   }
 
   // ============================================================================
-  // OAUTH AUTHENTICATION (GOOGLE & GITHUB) - COMMENTED OUT FOR LATER
-  // ============================================================================
-  // To enable OAuth:
-  // 1. Get OAuth credentials from Google Cloud Console and GitHub
-  // 2. Update .env with GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, etc.
-  // 3. Uncomment the code below
-  // 4. Uncomment OAuth imports at the top of this file
-  // 5. Uncomment OAuth strategies in auth.module.ts
-  // 6. Restart the service
+  // OAUTH AUTHENTICATION (GOOGLE & GITHUB)
   // ============================================================================
 
-  /*
   // Google OAuth
   @Get('google')
   @UseGuards(GoogleAuthGuard)
@@ -121,5 +112,4 @@ export class AuthController {
     
     return res.redirect(redirectUrl);
   }
-  */
 }

@@ -18,6 +18,8 @@ const auth_service_1 = require("./auth.service");
 const login_dto_1 = require("./dto/login.dto");
 const jwt_refresh_auth_guard_1 = require("./guards/jwt-refresh-auth.guard");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
+const google_auth_guard_1 = require("./guards/google-auth.guard");
+const github_auth_guard_1 = require("./guards/github-auth.guard");
 const config_1 = require("@nestjs/config");
 let AuthController = class AuthController {
     authService;
@@ -47,6 +49,24 @@ let AuthController = class AuthController {
     }
     async verifyResetToken(token) {
         return this.authService.verifyResetToken(token);
+    }
+    async googleAuth() {
+    }
+    async googleAuthCallback(req, res) {
+        const user = await this.authService.validateOAuthUser(req.user);
+        const tokens = await this.authService.login(user);
+        const frontendUrl = this.configService.get('FRONTEND_URL');
+        const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+        return res.redirect(redirectUrl);
+    }
+    async githubAuth() {
+    }
+    async githubAuthCallback(req, res) {
+        const user = await this.authService.validateOAuthUser(req.user);
+        const tokens = await this.authService.login(user);
+        const frontendUrl = this.configService.get('FRONTEND_URL');
+        const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+        return res.redirect(redirectUrl);
     }
 };
 exports.AuthController = AuthController;
@@ -103,6 +123,38 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyResetToken", null);
+__decorate([
+    (0, common_1.Get)('google'),
+    (0, common_1.UseGuards)(google_auth_guard_1.GoogleAuthGuard),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "googleAuth", null);
+__decorate([
+    (0, common_1.Get)('google/callback'),
+    (0, common_1.UseGuards)(google_auth_guard_1.GoogleAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "googleAuthCallback", null);
+__decorate([
+    (0, common_1.Get)('github'),
+    (0, common_1.UseGuards)(github_auth_guard_1.GithubAuthGuard),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "githubAuth", null);
+__decorate([
+    (0, common_1.Get)('github/callback'),
+    (0, common_1.UseGuards)(github_auth_guard_1.GithubAuthGuard),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "githubAuthCallback", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService,

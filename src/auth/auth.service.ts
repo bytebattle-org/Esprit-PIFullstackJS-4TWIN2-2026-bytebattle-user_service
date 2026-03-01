@@ -130,8 +130,8 @@ export class AuthService {
     const user = await this.userModel.findOne({ email });
 
     if (!user) {
-      // Don't reveal if user exists or not for security
-      return { message: 'If an account with that email exists, a password reset link has been sent.' };
+      // Return error if user doesn't exist
+      throw new BadRequestException('No account found with this email address');
     }
 
     // Generate reset token (6-digit code)
@@ -157,12 +157,12 @@ export class AuthService {
     // In development, return the token. In production, don't return it
     if (this.configService.get('NODE_ENV') === 'development') {
       return {
-        message: 'Password reset token generated',
+        message: 'Password reset code sent to your email',
         resetToken, // Only for development
       };
     }
 
-    return { message: 'If an account with that email exists, a password reset link has been sent.' };
+    return { message: 'Password reset code sent to your email' };
   }
 
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
@@ -219,12 +219,9 @@ export class AuthService {
   }
 
   // ============================================================================
-  // OAUTH METHODS - COMMENTED OUT FOR LATER
-  // ============================================================================
-  // Uncomment these methods when enabling OAuth authentication
+  // OAUTH METHODS
   // ============================================================================
 
-  /*
   async validateOAuthUser(profile: any): Promise<any> {
     const { email, providerId, provider, username, avatar } = profile;
 
@@ -297,5 +294,4 @@ export class AuthService {
 
     return username;
   }
-  */
 }

@@ -19,6 +19,8 @@ const jwt_refresh_strategy_1 = require("./strategies/jwt-refresh.strategy");
 const webauthn_service_1 = require("./webauthn/webauthn.service");
 const webauthn_controller_1 = require("./webauthn/webauthn.controller");
 const email_module_1 = require("../email/email.module");
+const google_strategy_1 = require("./strategies/google.strategy");
+const github_strategy_1 = require("./strategies/github.strategy");
 const user_schema_1 = require("../users/schemas/user.schema");
 let AuthModule = class AuthModule {
 };
@@ -44,6 +46,8 @@ exports.AuthModule = AuthModule = __decorate([
             jwt_strategy_1.JwtStrategy,
             jwt_refresh_strategy_1.JwtRefreshStrategy,
             webauthn_service_1.WebAuthnService,
+            google_strategy_1.GoogleStrategy,
+            github_strategy_1.GithubStrategy,
         ],
         exports: [auth_service_1.AuthService, webauthn_service_1.WebAuthnService],
     })
