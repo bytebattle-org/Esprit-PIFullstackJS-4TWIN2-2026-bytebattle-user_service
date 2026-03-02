@@ -17,6 +17,7 @@ let User = class User extends mongoose_2.Document {
     email;
     passwordHash;
     role;
+    isBanned;
     provider;
     providerId;
     providerAvatar;
@@ -40,11 +41,11 @@ let User = class User extends mongoose_2.Document {
 };
 exports.User = User;
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, unique: true }),
+    (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", String)
 ], User.prototype, "username", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, unique: true }),
+    (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
 __decorate([
@@ -55,6 +56,10 @@ __decorate([
     (0, mongoose_1.Prop)({ enum: ['user', 'admin'], default: 'user' }),
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isBanned", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ enum: ['local', 'google', 'github'], default: 'local' }),
     __metadata("design:type", String)

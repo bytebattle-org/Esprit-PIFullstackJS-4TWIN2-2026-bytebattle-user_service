@@ -38,4 +38,26 @@ export declare class UsersService {
     }): Promise<User>;
     addBadge(id: string, badge: string): Promise<User>;
     getLeaderboard(limit?: number): Promise<User[]>;
+    getAdminAnalytics(): Promise<{
+        totalUsers: number;
+        activeUsers: number;
+    }>;
+    updateRole(id: string, role: string): Promise<import("mongoose").Document<unknown, {}, UserDocument, {}, import("mongoose").DefaultSchemaOptions> & User & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    }>;
+    updateStatus(id: string, isBanned: boolean): Promise<import("mongoose").Document<unknown, {}, UserDocument, {}, import("mongoose").DefaultSchemaOptions> & User & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    } & {
+        id: string;
+    }>;
+    resetPasswordAdmin(id: string, newPassword?: string): Promise<{
+        message: string;
+        tempPassword: string;
+    }>;
 }

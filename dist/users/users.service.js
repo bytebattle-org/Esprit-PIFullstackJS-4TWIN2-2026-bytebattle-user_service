@@ -253,6 +253,39 @@ let UsersService = class UsersService {
             .limit(limit)
             .exec();
     }
+    async getAdminAnalytics() {
+        const totalUsers = await this.userModel.countDocuments();
+        const activeUsers = await this.userModel.countDocuments({
+            updatedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+        });
+        return {
+            totalUsers,
+            activeUsers,
+        };
+    }
+    async updateRole(id, role) {
+        if (!['user', 'admin'].includes(role)) {
+            throw new common_1.BadRequestException('Invalid role');
+        }
+        const user = await this.userModel.findByIdAndUpdate(id, { role }, { new: true }).select('-passwordHash').exec();
+        if (!user)
+            throw new common_1.NotFoundException('User not found');
+        return user;
+    }
+    async updateStatus(id, isBanned) {
+        const user = await this.userModel.findByIdAndUpdate(id, { isBanned }, { new: true }).select('-passwordHash').exec();
+        if (!user)
+            throw new common_1.NotFoundException('User not found');
+        return user;
+    }
+    async resetPasswordAdmin(id, newPassword) {
+        const password = newPassword || Math.random().toString(36).slice(-8);
+        const passwordHash = await bcrypt.hash(password, 10);
+        const user = await this.userModel.findByIdAndUpdate(id, { passwordHash }, { new: true }).select('-passwordHash').exec();
+        if (!user)
+            throw new common_1.NotFoundException('User not found');
+        return { message: 'Password reset successfully', tempPassword: password };
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([

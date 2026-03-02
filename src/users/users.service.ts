@@ -12,7 +12,7 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private emailService: EmailService,
-  ) {}
+  ) { }
 
   private generateVerificationCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -209,7 +209,7 @@ export class UsersService {
     },
   ): Promise<User> {
     const updateData: any = {};
-    
+
     Object.keys(stats).forEach((key) => {
       updateData[`statistics.${key}`] = stats[key];
     });
@@ -281,5 +281,47 @@ export class UsersService {
       .sort({ 'statistics.totalPoints': -1 })
       .limit(limit)
       .exec();
+  }
+
+  async getAdminAnalytics() {
+    const totalUsers = await this.userModel.countDocuments();
+    // Assuming active users are those who logged in last 30 days. No 'lastActiveAt' exists,
+    // so let's mock it for now since we just have createdAt and updatedAt
+    const activeUsers = await this.userModel.countDocuments({
+      updatedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+    });
+
+    return {
+      totalUsers,
+      activeUsers,
+    };
+  }
+
+  async updateRole(id: string, role: string) {
+    if (!['user', 'admin'].includes(role)) {
+      throw new BadRequestException('Invalid role');
+    }
+    const user = await this.userModel.findByIdAndUpdate(id, { role }, { new: true }).select('-passwordHash').exec();
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async updateStatus(id: string, isBanned: boolean) {
+    const user = await this.userModel.findByIdAndUpdate(id, { isBanned }, { new: true }).select('-passwordHash').exec();
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async resetPasswordAdmin(id: string, newPassword?: string) {
+    const password = newPassword || Math.random().toString(36).slice(-8); // Generate random if not provided
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await this.userModel.findByIdAndUpdate(id, { passwordHash }, { new: true }).select('-passwordHash').exec();
+    if (!user) throw new NotFoundException('User not found');
+
+    // Optional: Email the user their new password
+    // await this.emailService.sendPasswordResetAdmin(user.email, password);
+
+    return { message: 'Password reset successfully', tempPassword: password };
   }
 }

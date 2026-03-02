@@ -22,6 +22,7 @@ export declare class WebAuthnService {
         username: string;
         email: string;
         role: string;
+        isBanned: boolean;
         provider: string;
         providerId: string;
         providerAvatar: string;

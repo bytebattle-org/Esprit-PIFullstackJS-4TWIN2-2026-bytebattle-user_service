@@ -8,14 +8,19 @@ import {
   Delete,
   Query,
   ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   create(@Body(ValidationPipe) createUserDto: CreateUserDto) {
@@ -32,7 +37,16 @@ export class UsersController {
     return this.usersService.resendVerificationCode(body.email);
   }
 
+  @Get('admin/analytics')
+  @Roles('admin')
+  @UseGuards(RolesGuard)
+  getAnalytics() {
+    return this.usersService.getAdminAnalytics();
+  }
+
   @Get()
+  @Roles('admin')
+  @UseGuards(RolesGuard)
   findAll() {
     return this.usersService.findAll();
   }
@@ -47,6 +61,36 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
+  @Patch(':id/role')
+  @Roles('admin')
+  @UseGuards(RolesGuard)
+  updateRole(
+    @Param('id') id: string,
+    @Body('role') role: string,
+  ) {
+    return this.usersService.updateRole(id, role);
+  }
+
+  @Patch(':id/status')
+  @Roles('admin')
+  @UseGuards(RolesGuard)
+  updateStatus(
+    @Param('id') id: string,
+    @Body('isBanned') isBanned: boolean,
+  ) {
+    return this.usersService.updateStatus(id, isBanned);
+  }
+
+  @Post(':id/reset-password-admin')
+  @Roles('admin')
+  @UseGuards(RolesGuard)
+  resetPasswordAdmin(
+    @Param('id') id: string,
+    @Body('newPassword') newPassword?: string,
+  ) {
+    return this.usersService.resetPasswordAdmin(id, newPassword);
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -56,6 +100,8 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Roles('admin')
+  @UseGuards(RolesGuard)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
