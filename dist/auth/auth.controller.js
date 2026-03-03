@@ -66,8 +66,11 @@ let AuthController = class AuthController {
     }
     async googleAuthCallback(req, res) {
         const user = await this.authService.validateOAuthUser(req.user);
-        const result = await this.authService.loginWithOAuth(user);
         const frontendUrl = this.configService.get('FRONTEND_URL');
+        if (user.role === 'admin') {
+            return res.redirect(`${frontendUrl}/authentication/sign-in?error=admin_oauth_blocked`);
+        }
+        const result = await this.authService.loginWithOAuth(user);
         const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`;
         return res.redirect(redirectUrl);
     }
@@ -75,8 +78,11 @@ let AuthController = class AuthController {
     }
     async githubAuthCallback(req, res) {
         const user = await this.authService.validateOAuthUser(req.user);
-        const result = await this.authService.loginWithOAuth(user);
         const frontendUrl = this.configService.get('FRONTEND_URL');
+        if (user.role === 'admin') {
+            return res.redirect(`${frontendUrl}/authentication/sign-in?error=admin_oauth_blocked`);
+        }
+        const result = await this.authService.loginWithOAuth(user);
         const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`;
         return res.redirect(redirectUrl);
     }

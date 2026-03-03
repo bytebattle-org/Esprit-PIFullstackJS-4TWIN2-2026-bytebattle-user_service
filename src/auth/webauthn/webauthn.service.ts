@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -157,6 +157,10 @@ export class WebAuthnService {
     const user = await this.userModel.findOne({ email });
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (user.isBanned) {
+      throw new ForbiddenException('Your account has been banned. Please contact support.');
     }
 
     if (!user.currentChallenge) {

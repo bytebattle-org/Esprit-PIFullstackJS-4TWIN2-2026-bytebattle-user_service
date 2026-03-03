@@ -106,12 +106,26 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   async googleAuthCallback(@Request() req, @Res() res: Response) {
     const user = await this.authService.validateOAuthUser(req.user);
-    
+    const frontendUrl = this.configService.get('FRONTEND_URL');
+
+    // Banned users cannot log in
+    if (user.isBanned) {
+      return res.redirect(
+        `${frontendUrl}/authentication/sign-in?error=account_banned`,
+      );
+    }
+
+    // Admin users cannot log in via OAuth — they must use email/password
+    if (user.role === 'admin') {
+      return res.redirect(
+        `${frontendUrl}/authentication/sign-in?error=admin_oauth_blocked`,
+      );
+    }
+
     // For OAuth users, automatically disable 2FA since OAuth providers have their own security
     // This allows seamless OAuth login even if user previously had 2FA enabled
     const result = await this.authService.loginWithOAuth(user);
     
-    const frontendUrl = this.configService.get('FRONTEND_URL');
     const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`;
     
     return res.redirect(redirectUrl);
@@ -128,12 +142,26 @@ export class AuthController {
   @UseGuards(GithubAuthGuard)
   async githubAuthCallback(@Request() req, @Res() res: Response) {
     const user = await this.authService.validateOAuthUser(req.user);
-    
+    const frontendUrl = this.configService.get('FRONTEND_URL');
+
+    // Banned users cannot log in
+    if (user.isBanned) {
+      return res.redirect(
+        `${frontendUrl}/authentication/sign-in?error=account_banned`,
+      );
+    }
+
+    // Admin users cannot log in via OAuth — they must use email/password
+    if (user.role === 'admin') {
+      return res.redirect(
+        `${frontendUrl}/authentication/sign-in?error=admin_oauth_blocked`,
+      );
+    }
+
     // For OAuth users, automatically disable 2FA since OAuth providers have their own security
     // This allows seamless OAuth login even if user previously had 2FA enabled
     const result = await this.authService.loginWithOAuth(user);
     
-    const frontendUrl = this.configService.get('FRONTEND_URL');
     const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.accessToken}&refreshToken=${result.refreshToken}`;
     
     return res.redirect(redirectUrl);

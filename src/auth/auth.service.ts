@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -33,6 +33,10 @@ export class AuthService {
       throw new BadRequestException('Please verify your email first');
     }
 
+    if (user.isBanned) {
+      throw new ForbiddenException('Your account has been banned. Please contact support.');
+    }
+
     const { passwordHash, refreshToken, ...result } = user.toObject();
     return result;
   }
@@ -55,6 +59,10 @@ export class AuthService {
     
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    if (user.isBanned) {
+      throw new ForbiddenException('Your account has been banned. Please contact support.');
     }
 
     return this.generateTokens(user);
@@ -109,6 +117,10 @@ export class AuthService {
     
     if (!user || !user.refreshToken) {
       throw new UnauthorizedException('Access denied');
+    }
+
+    if (user.isBanned) {
+      throw new ForbiddenException('Your account has been banned. Please contact support.');
     }
 
     const refreshTokenMatches = await bcrypt.compare(
