@@ -36,17 +36,11 @@ export declare class User extends Document {
     passwordResetToken?: string;
     passwordResetExpires?: Date;
     refreshToken?: string;
-    webauthnCredentials: Array<{
-        credentialId: string;
-        credentialPublicKey: string;
-        counter: number;
-        transports?: string[];
-        createdAt: Date;
-    }>;
-    currentChallenge?: string;
     twoFactorSecret?: string;
     isTwoFactorEnabled: boolean;
     twoFactorRecoveryCodes: string[];
+    faceIdEnabled: boolean;
+    faceEmbedding: number[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -257,39 +251,6 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
     }, "id"> & {
         id: string;
     }> | undefined;
-    createdAt?: import("mongoose").SchemaDefinitionProperty<Date, User, Document<unknown, {}, User, {
-        id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    webauthnCredentials?: import("mongoose").SchemaDefinitionProperty<{
-        credentialId: string;
-        credentialPublicKey: string;
-        counter: number;
-        transports?: string[];
-        createdAt: Date;
-    }[], User, Document<unknown, {}, User, {
-        id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
-    currentChallenge?: import("mongoose").SchemaDefinitionProperty<string | undefined, User, Document<unknown, {}, User, {
-        id: string;
-    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
-        _id: import("mongoose").Types.ObjectId;
-    }> & {
-        __v: number;
-    }, "id"> & {
-        id: string;
-    }> | undefined;
     twoFactorSecret?: import("mongoose").SchemaDefinitionProperty<string | undefined, User, Document<unknown, {}, User, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
@@ -309,6 +270,33 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
         id: string;
     }> | undefined;
     twoFactorRecoveryCodes?: import("mongoose").SchemaDefinitionProperty<string[], User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    faceIdEnabled?: import("mongoose").SchemaDefinitionProperty<boolean, User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    faceEmbedding?: import("mongoose").SchemaDefinitionProperty<number[], User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    createdAt?: import("mongoose").SchemaDefinitionProperty<Date, User, Document<unknown, {}, User, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
         _id: import("mongoose").Types.ObjectId;

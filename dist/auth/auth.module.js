@@ -16,14 +16,14 @@ const auth_service_1 = require("./auth.service");
 const auth_controller_1 = require("./auth.controller");
 const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const jwt_refresh_strategy_1 = require("./strategies/jwt-refresh.strategy");
-const webauthn_service_1 = require("./webauthn/webauthn.service");
-const webauthn_controller_1 = require("./webauthn/webauthn.controller");
 const email_module_1 = require("../email/email.module");
 const google_strategy_1 = require("./strategies/google.strategy");
 const github_strategy_1 = require("./strategies/github.strategy");
 const user_schema_1 = require("../users/schemas/user.schema");
 const two_factor_service_1 = require("./two-factor/two-factor.service");
 const two_factor_controller_1 = require("./two-factor/two-factor.controller");
+const faceid_service_1 = require("./faceid/faceid.service");
+const faceid_controller_1 = require("./faceid/faceid.controller");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -42,17 +42,17 @@ exports.AuthModule = AuthModule = __decorate([
             mongoose_1.MongooseModule.forFeature([{ name: user_schema_1.User.name, schema: user_schema_1.UserSchema }]),
             email_module_1.EmailModule,
         ],
-        controllers: [auth_controller_1.AuthController, webauthn_controller_1.WebAuthnController, two_factor_controller_1.TwoFactorController],
+        controllers: [auth_controller_1.AuthController, two_factor_controller_1.TwoFactorController, faceid_controller_1.FaceIdController],
         providers: [
             auth_service_1.AuthService,
             jwt_strategy_1.JwtStrategy,
             jwt_refresh_strategy_1.JwtRefreshStrategy,
-            webauthn_service_1.WebAuthnService,
             google_strategy_1.GoogleStrategy,
             github_strategy_1.GithubStrategy,
             two_factor_service_1.TwoFactorService,
+            faceid_service_1.FaceIdService,
         ],
-        exports: [auth_service_1.AuthService, webauthn_service_1.WebAuthnService, two_factor_service_1.TwoFactorService],
+        exports: [auth_service_1.AuthService, two_factor_service_1.TwoFactorService, faceid_service_1.FaceIdService],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

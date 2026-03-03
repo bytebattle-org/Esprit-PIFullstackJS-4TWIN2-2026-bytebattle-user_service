@@ -67,6 +67,9 @@ let AuthController = class AuthController {
     async googleAuthCallback(req, res) {
         const user = await this.authService.validateOAuthUser(req.user);
         const frontendUrl = this.configService.get('FRONTEND_URL');
+        if (user.isBanned) {
+            return res.redirect(`${frontendUrl}/authentication/sign-in?error=account_banned`);
+        }
         if (user.role === 'admin') {
             return res.redirect(`${frontendUrl}/authentication/sign-in?error=admin_oauth_blocked`);
         }
@@ -79,6 +82,9 @@ let AuthController = class AuthController {
     async githubAuthCallback(req, res) {
         const user = await this.authService.validateOAuthUser(req.user);
         const frontendUrl = this.configService.get('FRONTEND_URL');
+        if (user.isBanned) {
+            return res.redirect(`${frontendUrl}/authentication/sign-in?error=account_banned`);
+        }
         if (user.role === 'admin') {
             return res.redirect(`${frontendUrl}/authentication/sign-in?error=admin_oauth_blocked`);
         }
