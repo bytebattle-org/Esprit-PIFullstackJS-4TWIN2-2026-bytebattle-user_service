@@ -104,30 +104,6 @@ export class User extends Document {
   @Prop({ required: false })
   refreshToken?: string;
 
-  // WebAuthn credentials for Face ID / Touch ID / Fingerprint
-  @Prop({
-    type: [
-      {
-        credentialId: String,
-        credentialPublicKey: String,
-        counter: Number,
-        transports: [String],
-        createdAt: Date,
-      },
-    ],
-    default: [],
-  })
-  webauthnCredentials: Array<{
-    credentialId: string;
-    credentialPublicKey: string;
-    counter: number;
-    transports?: string[];
-    createdAt: Date;
-  }>;
-
-  @Prop({ required: false })
-  currentChallenge?: string;
-
   // Two-Factor Authentication (TOTP)
   @Prop({ required: false })
   twoFactorSecret?: string;
@@ -137,6 +113,13 @@ export class User extends Document {
 
   @Prop({ type: [String], default: [] })
   twoFactorRecoveryCodes: string[];
+
+  // Face ID Recognition
+  @Prop({ default: false })
+  faceIdEnabled: boolean;
+
+  @Prop({ type: [Number], default: [] })
+  faceEmbedding: number[];
 
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
