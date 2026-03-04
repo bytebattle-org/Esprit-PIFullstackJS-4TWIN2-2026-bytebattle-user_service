@@ -77,6 +77,9 @@ let AuthService = class AuthService {
         if (!user.isEmailVerified) {
             throw new common_1.BadRequestException('Please verify your email first');
         }
+        if (user.isBanned) {
+            throw new common_1.ForbiddenException('Your account has been banned. Please contact support.');
+        }
         const { passwordHash, refreshToken, ...result } = user.toObject();
         return result;
     }
@@ -94,6 +97,9 @@ let AuthService = class AuthService {
         const user = await this.userModel.findById(userId);
         if (!user) {
             throw new common_1.UnauthorizedException('User not found');
+        }
+        if (user.isBanned) {
+            throw new common_1.ForbiddenException('Your account has been banned. Please contact support.');
         }
         return this.generateTokens(user);
     }
@@ -136,6 +142,9 @@ let AuthService = class AuthService {
         const user = await this.userModel.findById(userId);
         if (!user || !user.refreshToken) {
             throw new common_1.UnauthorizedException('Access denied');
+        }
+        if (user.isBanned) {
+            throw new common_1.ForbiddenException('Your account has been banned. Please contact support.');
         }
         const refreshTokenMatches = await bcrypt.compare(refreshToken, user.refreshToken);
         if (!refreshTokenMatches) {
