@@ -34,17 +34,14 @@ let UsersController = class UsersController {
     resendVerification(body) {
         return this.usersService.resendVerificationCode(body.email);
     }
+    getLeaderboard(limit) {
+        return this.usersService.getLeaderboard(limit ? parseInt(limit) : 10);
+    }
     getAnalytics() {
         return this.usersService.getAdminAnalytics();
     }
     findAll() {
         return this.usersService.findAll();
-    }
-    getLeaderboard(limit) {
-        return this.usersService.getLeaderboard(limit ? parseInt(limit) : 10);
-    }
-    findOne(id) {
-        return this.usersService.findOne(id);
     }
     updateRole(id, role) {
         return this.usersService.updateRole(id, role);
@@ -55,11 +52,14 @@ let UsersController = class UsersController {
     resetPasswordAdmin(id, newPassword) {
         return this.usersService.resetPasswordAdmin(id, newPassword);
     }
-    update(id, updateUserDto) {
-        return this.usersService.update(id, updateUserDto);
-    }
     remove(id) {
         return this.usersService.remove(id);
+    }
+    findOne(id) {
+        return this.usersService.findOne(id);
+    }
+    update(id, updateUserDto) {
+        return this.usersService.update(id, updateUserDto);
     }
     updateStats(id, stats) {
         return this.usersService.updateStats(id, stats);
@@ -94,22 +94,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "resendVerification", null);
 __decorate([
-    (0, common_1.Get)('admin/analytics'),
-    (0, roles_decorator_1.Roles)('admin'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], UsersController.prototype, "getAnalytics", null);
-__decorate([
-    (0, common_1.Get)(),
-    (0, roles_decorator_1.Roles)('admin'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], UsersController.prototype, "findAll", null);
-__decorate([
     (0, common_1.Get)('leaderboard'),
     __param(0, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
@@ -117,16 +101,25 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "getLeaderboard", null);
 __decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    (0, common_1.Get)('admin/analytics'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
-], UsersController.prototype, "findOne", null);
+], UsersController.prototype, "getAnalytics", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Patch)(':id/role'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('admin'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('role')),
     __metadata("design:type", Function),
@@ -135,8 +128,8 @@ __decorate([
 ], UsersController.prototype, "updateRole", null);
 __decorate([
     (0, common_1.Patch)(':id/status'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('admin'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('isBanned')),
     __metadata("design:type", Function),
@@ -145,8 +138,8 @@ __decorate([
 ], UsersController.prototype, "updateStatus", null);
 __decorate([
     (0, common_1.Post)(':id/reset-password-admin'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('admin'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('newPassword')),
     __metadata("design:type", Function),
@@ -154,7 +147,25 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "resetPasswordAdmin", null);
 __decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findOne", null);
+__decorate([
     (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
@@ -162,16 +173,8 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "update", null);
 __decorate([
-    (0, common_1.Delete)(':id'),
-    (0, roles_decorator_1.Roles)('admin'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], UsersController.prototype, "remove", null);
-__decorate([
     (0, common_1.Patch)(':id/stats'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -180,6 +183,7 @@ __decorate([
 ], UsersController.prototype, "updateStats", null);
 __decorate([
     (0, common_1.Post)(':id/achievements'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -188,6 +192,7 @@ __decorate([
 ], UsersController.prototype, "addAchievement", null);
 __decorate([
     (0, common_1.Post)(':id/badges'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('badge')),
     __metadata("design:type", Function),
@@ -196,7 +201,6 @@ __decorate([
 ], UsersController.prototype, "addBadge", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [users_service_1.UsersService])
 ], UsersController);
 //# sourceMappingURL=users.controller.js.map

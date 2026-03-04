@@ -18,9 +18,10 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
+
+  // ── Public routes (no auth required) ──────────────────────────────────────
 
   @Post()
   create(@Body(ValidationPipe) createUserDto: CreateUserDto) {
@@ -37,33 +38,30 @@ export class UsersController {
     return this.usersService.resendVerificationCode(body.email);
   }
 
-  @Get('admin/analytics')
-  @Roles('admin')
-  @UseGuards(RolesGuard)
-  getAnalytics() {
-    return this.usersService.getAdminAnalytics();
-  }
-
-  @Get()
-  @Roles('admin')
-  @UseGuards(RolesGuard)
-  findAll() {
-    return this.usersService.findAll();
-  }
-
   @Get('leaderboard')
   getLeaderboard(@Query('limit') limit?: string) {
     return this.usersService.getLeaderboard(limit ? parseInt(limit) : 10);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+  // ── Admin-only routes ──────────────────────────────────────────────────────
+
+  @Get('admin/analytics')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  getAnalytics() {
+    return this.usersService.getAdminAnalytics();
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  findAll() {
+    return this.usersService.findAll();
   }
 
   @Patch(':id/role')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @UseGuards(RolesGuard)
   updateRole(
     @Param('id') id: string,
     @Body('role') role: string,
@@ -72,8 +70,8 @@ export class UsersController {
   }
 
   @Patch(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @UseGuards(RolesGuard)
   updateStatus(
     @Param('id') id: string,
     @Body('isBanned') isBanned: boolean,
@@ -82,8 +80,8 @@ export class UsersController {
   }
 
   @Post(':id/reset-password-admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @UseGuards(RolesGuard)
   resetPasswordAdmin(
     @Param('id') id: string,
     @Body('newPassword') newPassword?: string,
@@ -91,7 +89,23 @@ export class UsersController {
     return this.usersService.resetPasswordAdmin(id, newPassword);
   }
 
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
+  }
+
+  // ── Authenticated user routes ──────────────────────────────────────────────
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
+  }
+
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id') id: string,
     @Body(ValidationPipe) updateUserDto: UpdateUserDto,
@@ -99,14 +113,8 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  @Delete(':id')
-  @Roles('admin')
-  @UseGuards(RolesGuard)
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
-  }
-
   @Patch(':id/stats')
+  @UseGuards(JwtAuthGuard)
   updateStats(
     @Param('id') id: string,
     @Body()
@@ -124,6 +132,7 @@ export class UsersController {
   }
 
   @Post(':id/achievements')
+  @UseGuards(JwtAuthGuard)
   addAchievement(
     @Param('id') id: string,
     @Body()
@@ -137,6 +146,7 @@ export class UsersController {
   }
 
   @Post(':id/badges')
+  @UseGuards(JwtAuthGuard)
   addBadge(@Param('id') id: string, @Body('badge') badge: string) {
     return this.usersService.addBadge(id, badge);
   }
