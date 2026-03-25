@@ -1,26 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter | null;
+  private readonly transporter: nodemailer.Transporter | null;
 
-  constructor(private configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
     const smtpUser = this.configService.get('SMTP_USER');
     const smtpPass = this.configService.get('SMTP_PASS');
+    const smtpHost = this.configService.get('SMTP_HOST') || 'smtp.gmail.com';
+    const smtpPort = Number(this.configService.get('SMTP_PORT') || 587);
 
     // Only create transporter if SMTP credentials are provided
     if (smtpUser && smtpPass) {
-      this.transporter = nodemailer.createTransport({
-        host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
-        port: this.configService.get('SMTP_PORT') || 587,
+      const transportOptions: SMTPTransport.Options = {
+        host: smtpHost,
+        port: smtpPort,
         secure: false,
+        tls: {
+          servername: smtpHost,
+        },
         auth: {
           user: smtpUser,
           pass: smtpPass,
         },
-      });
+      };
+
+      this.transporter = nodemailer.createTransport(transportOptions);
     } else {
       console.warn('⚠️  Email service disabled: SMTP credentials not configured');
       this.transporter = null;
