@@ -61,13 +61,12 @@ export class UsersService {
 
     await user.save();
 
-    // Send verification email
-    try {
-      await this.emailService.sendVerificationEmail(email, verificationCode, username);
-    } catch (error) {
-      console.error('Failed to send verification email:', error);
-      // Don't fail user creation if email fails
-    }
+    // Fire-and-forget email so registration response is not blocked by SMTP latency.
+    void this.emailService
+      .sendVerificationEmail(email, verificationCode, username)
+      .catch((error) => {
+        console.error('Failed to send verification email:', error);
+      });
 
     return user;
   }
