@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User, UserSchema } from './schemas/user.schema';
 import { EmailModule } from '../email/email.module';
+import { AdminSeedService } from './admin-seed.service';
 
 @Module({
   imports: [
@@ -11,7 +12,7 @@ import { EmailModule } from '../email/email.module';
     EmailModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, AdminSeedService],
   exports: [UsersService],
 })
 export class UsersModule {}

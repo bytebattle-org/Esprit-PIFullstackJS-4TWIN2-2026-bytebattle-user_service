@@ -95,12 +95,11 @@ let UsersService = class UsersService {
             badges: [],
         });
         await user.save();
-        try {
-            await this.emailService.sendVerificationEmail(email, verificationCode, username);
-        }
-        catch (error) {
+        void this.emailService
+            .sendVerificationEmail(email, verificationCode, username)
+            .catch((error) => {
             console.error('Failed to send verification email:', error);
-        }
+        });
         return user;
     }
     async verifyEmail(email, code) {

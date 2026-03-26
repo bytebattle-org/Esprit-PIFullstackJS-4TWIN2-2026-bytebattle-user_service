@@ -53,16 +53,22 @@ let EmailService = class EmailService {
         this.configService = configService;
         const smtpUser = this.configService.get('SMTP_USER');
         const smtpPass = this.configService.get('SMTP_PASS');
+        const smtpHost = this.configService.get('SMTP_HOST') || 'smtp.gmail.com';
+        const smtpPort = Number(this.configService.get('SMTP_PORT') || 587);
         if (smtpUser && smtpPass) {
-            this.transporter = nodemailer.createTransport({
-                host: this.configService.get('SMTP_HOST') || 'smtp.gmail.com',
-                port: this.configService.get('SMTP_PORT') || 587,
+            const transportOptions = {
+                host: smtpHost,
+                port: smtpPort,
                 secure: false,
+                tls: {
+                    servername: smtpHost,
+                },
                 auth: {
                     user: smtpUser,
                     pass: smtpPass,
                 },
-            });
+            };
+            this.transporter = nodemailer.createTransport(transportOptions);
         }
         else {
             console.warn('⚠️  Email service disabled: SMTP credentials not configured');

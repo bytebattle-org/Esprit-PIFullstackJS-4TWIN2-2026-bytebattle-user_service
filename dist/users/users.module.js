@@ -13,6 +13,7 @@ const users_service_1 = require("./users.service");
 const users_controller_1 = require("./users.controller");
 const user_schema_1 = require("./schemas/user.schema");
 const email_module_1 = require("../email/email.module");
+const admin_seed_service_1 = require("./admin-seed.service");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
@@ -23,7 +24,7 @@ exports.UsersModule = UsersModule = __decorate([
             email_module_1.EmailModule,
         ],
         controllers: [users_controller_1.UsersController],
-        providers: [users_service_1.UsersService],
+        providers: [users_service_1.UsersService, admin_seed_service_1.AdminSeedService],
         exports: [users_service_1.UsersService],
     })
 ], UsersModule);
