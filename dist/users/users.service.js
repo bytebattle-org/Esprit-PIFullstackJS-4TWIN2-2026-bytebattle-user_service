@@ -248,7 +248,7 @@ let UsersService = class UsersService {
         return this.userModel
             .find()
             .select('-passwordHash')
-            .sort({ 'statistics.totalPoints': -1 })
+            .sort({ 'statistics.xp': -1, 'statistics.totalPoints': -1 })
             .limit(limit)
             .exec();
     }
