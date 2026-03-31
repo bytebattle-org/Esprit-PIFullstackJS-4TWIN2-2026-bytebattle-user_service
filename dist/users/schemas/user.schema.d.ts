@@ -41,8 +41,19 @@ export declare class User extends Document {
     twoFactorRecoveryCodes: string[];
     faceIdEnabled: boolean;
     faceEmbedding: number[];
+    friends: string[];
+    friendRequests: Array<{
+        _id: string;
+        from: any;
+        createdAt: Date;
+    }>;
     createdAt: Date;
     updatedAt: Date;
+}
+export interface FriendRequest {
+    _id: string;
+    from: any;
+    createdAt: Date;
 }
 export declare const UserSchema: import("mongoose").Schema<User, import("mongoose").Model<User, any, any, any, (Document<unknown, any, User, any, import("mongoose").DefaultSchemaOptions> & User & Required<{
     _id: import("mongoose").Types.ObjectId;
@@ -296,7 +307,29 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
     }, "id"> & {
         id: string;
     }> | undefined;
+    friends?: import("mongoose").SchemaDefinitionProperty<string[], User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
     createdAt?: import("mongoose").SchemaDefinitionProperty<Date, User, Document<unknown, {}, User, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
+        _id: import("mongoose").Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & {
+        id: string;
+    }> | undefined;
+    friendRequests?: import("mongoose").SchemaDefinitionProperty<{
+        _id: string;
+        from: any;
+        createdAt: Date;
+    }[], User, Document<unknown, {}, User, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<User & Required<{
         _id: import("mongoose").Types.ObjectId;

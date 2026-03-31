@@ -2,7 +2,7 @@ import { Injectable, ConflictException, NotFoundException, BadRequestException }
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { User, UserDocument } from './schemas/user.schema';
+import { User, UserDocument, FriendRequest } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { EmailService } from '../email/email.service';
@@ -322,5 +322,152 @@ export class UsersService {
     // await this.emailService.sendPasswordResetAdmin(user.email, password);
 
     return { message: 'Password reset successfully', tempPassword: password };
+  }
+
+  // Friend System Methods
+
+  async searchUsers(query: string) {
+    if (!query || typeof query !== 'string' || query.trim().length < 2) {
+      return { users: [] };
+    }
+
+    const users = await this.userModel
+      .find({
+        $or: [
+          { username: { $regex: query.trim(), $options: 'i' } },
+          { email: { $regex: query.trim(), $options: 'i' } },
+        ],
+      })
+      .select('username email profile statistics')
+      .limit(10)
+      .exec();
+
+    return { users };
+  }
+
+  async getFriends(userId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .populate('friends', 'username email profile statistics')
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return { friends: user.friends || [] };
+  }
+
+  async getFriendRequests(userId: string) {
+    const user = await this.userModel.findById(userId).exec();
+    
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return { requests: user.friendRequests || [] };
+  }
+
+  async sendFriendRequest(fromId: string, toId: string) {
+    // Check if trying to add self
+    if (fromId === toId) {
+      throw new BadRequestException('Cannot send friend request to yourself');
+    }
+
+    // Check if target user exists
+    const toUser = await this.userModel.findById(toId);
+    if (!toUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Check if already friends
+    const fromUser = await this.userModel.findById(fromId);
+    if (fromUser?.friends?.includes(toId)) {
+      throw new BadRequestException('Already friends');
+    }
+
+    // Check if request already exists
+    const existingRequest = toUser.friendRequests?.find(
+      (req: any) => req.from?.toString() === fromId,
+    );
+
+    if (existingRequest) {
+      throw new BadRequestException('Friend request already sent');
+    }
+
+    // Add friend request to target user
+    if (!toUser.friendRequests) {
+      toUser.friendRequests = [];
+    }
+
+    toUser.friendRequests.push({
+      _id: new Date().getTime().toString(),
+      from: fromUser,
+      createdAt: new Date(),
+    });
+
+    await toUser.save();
+    return { message: 'Friend request sent successfully' };
+  }
+
+  async acceptFriendRequest(requestId: string) {
+    const user = await this.userModel.findOne({
+      'friendRequests._id': requestId,
+    });
+
+    if (!user) {
+      throw new NotFoundException('Friend request not found');
+    }
+
+    const request = user.friendRequests.find((req: any) => req._id === requestId);
+    
+    if (!request) {
+      throw new NotFoundException('Friend request not found');
+    }
+
+    const friendId = request.from._id || request.from;
+
+    // Add to friends list
+    if (!user.friends) {
+      user.friends = [];
+    }
+    user.friends.push(friendId);
+
+    // Remove friend request
+    user.friendRequests = user.friendRequests.filter(
+      (req: any) => req._id !== requestId,
+    );
+
+    await user.save();
+
+    // Add current user to friend's friends list
+    const friend = await this.userModel.findById(friendId);
+    if (friend) {
+      if (!friend.friends) {
+        friend.friends = [];
+      }
+      friend.friends.push(user._id.toString());
+      await friend.save();
+    }
+
+    return { message: 'Friend request accepted' };
+  }
+
+  async rejectFriendRequest(requestId: string) {
+    const user = await this.userModel.findOne({
+      'friendRequests._id': requestId,
+    });
+
+    if (!user) {
+      throw new NotFoundException('Friend request not found');
+    }
+
+    user.friendRequests = user.friendRequests.filter(
+      (req: any) => req._id !== requestId,
+    );
+
+    await user.save();
+
+    return { message: 'Friend request rejected' };
   }
 }

@@ -121,11 +121,37 @@ export class User extends Document {
   @Prop({ type: [Number], default: [] })
   faceEmbedding: number[];
 
+  // Friends and Friend Requests
+  @Prop({ type: [{ type: String, ref: 'User' }], default: [] })
+  friends: string[];
+
+  @Prop({
+    type: [
+      {
+        _id: String,
+        from: { type: Object, ref: 'User' },
+        createdAt: Date,
+      },
+    ],
+    default: [],
+  })
+  friendRequests: Array<{
+    _id: string;
+    from: any;
+    createdAt: Date;
+  }>;
+
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 
   @Prop({ type: Date, default: Date.now })
   updatedAt: Date;
+}
+
+export interface FriendRequest {
+  _id: string;
+  from: any;
+  createdAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

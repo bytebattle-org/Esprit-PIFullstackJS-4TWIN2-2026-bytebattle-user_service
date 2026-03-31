@@ -37,6 +37,24 @@ let UsersController = class UsersController {
     getLeaderboard(limit) {
         return this.usersService.getLeaderboard(limit ? parseInt(limit) : 10);
     }
+    searchUsers(query) {
+        return this.usersService.searchUsers(query);
+    }
+    getFriends(userId) {
+        return this.usersService.getFriends(userId);
+    }
+    getFriendRequests(userId) {
+        return this.usersService.getFriendRequests(userId);
+    }
+    sendFriendRequest(body) {
+        return this.usersService.sendFriendRequest(body.fromUserId, body.toUserId);
+    }
+    acceptFriendRequest(requestId, body) {
+        return this.usersService.acceptFriendRequest(requestId);
+    }
+    rejectFriendRequest(requestId, body) {
+        return this.usersService.rejectFriendRequest(requestId);
+    }
     getAnalytics() {
         return this.usersService.getAdminAnalytics();
     }
@@ -100,6 +118,56 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "getLeaderboard", null);
+__decorate([
+    (0, common_1.Get)('search'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Query)('q')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "searchUsers", null);
+__decorate([
+    (0, common_1.Get)('friends'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Query)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getFriends", null);
+__decorate([
+    (0, common_1.Get)('friend-requests'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Query)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getFriendRequests", null);
+__decorate([
+    (0, common_1.Post)('friend-request'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "sendFriendRequest", null);
+__decorate([
+    (0, common_1.Post)('friend-request/:id/accept'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "acceptFriendRequest", null);
+__decorate([
+    (0, common_1.Post)('friend-request/:id/reject'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "rejectFriendRequest", null);
 __decorate([
     (0, common_1.Get)('admin/analytics'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

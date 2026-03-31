@@ -18,6 +18,41 @@ export declare class UsersController {
         message: string;
     }>;
     getLeaderboard(limit?: string): Promise<import("./schemas/user.schema").User[]>;
+    searchUsers(query: string): Promise<{
+        users: (import("mongoose").Document<unknown, {}, import("./schemas/user.schema").UserDocument, {}, import("mongoose").DefaultSchemaOptions> & import("./schemas/user.schema").User & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
+            _id: import("mongoose").Types.ObjectId;
+        }> & {
+            __v: number;
+        } & {
+            id: string;
+        })[];
+    }>;
+    getFriends(userId: string): Promise<{
+        friends: string[];
+    }>;
+    getFriendRequests(userId: string): Promise<{
+        requests: {
+            _id: string;
+            from: any;
+            createdAt: Date;
+        }[];
+    }>;
+    sendFriendRequest(body: {
+        fromUserId: string;
+        toUserId: string;
+    }): Promise<{
+        message: string;
+    }>;
+    acceptFriendRequest(requestId: string, body: {
+        userId?: string;
+    }): Promise<{
+        message: string;
+    }>;
+    rejectFriendRequest(requestId: string, body: {
+        userId?: string;
+    }): Promise<{
+        message: string;
+    }>;
     getAnalytics(): Promise<{
         totalUsers: number;
         activeUsers: number;

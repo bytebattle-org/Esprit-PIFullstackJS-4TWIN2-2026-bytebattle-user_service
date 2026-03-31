@@ -60,4 +60,32 @@ export declare class UsersService {
         message: string;
         tempPassword: string;
     }>;
+    searchUsers(query: string): Promise<{
+        users: (import("mongoose").Document<unknown, {}, UserDocument, {}, import("mongoose").DefaultSchemaOptions> & User & import("mongoose").Document<import("mongoose").Types.ObjectId, any, any, Record<string, any>, {}> & Required<{
+            _id: import("mongoose").Types.ObjectId;
+        }> & {
+            __v: number;
+        } & {
+            id: string;
+        })[];
+    }>;
+    getFriends(userId: string): Promise<{
+        friends: string[];
+    }>;
+    getFriendRequests(userId: string): Promise<{
+        requests: {
+            _id: string;
+            from: any;
+            createdAt: Date;
+        }[];
+    }>;
+    sendFriendRequest(fromId: string, toId: string): Promise<{
+        message: string;
+    }>;
+    acceptFriendRequest(requestId: string): Promise<{
+        message: string;
+    }>;
+    rejectFriendRequest(requestId: string): Promise<{
+        message: string;
+    }>;
 }

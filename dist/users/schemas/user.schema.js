@@ -36,6 +36,8 @@ let User = class User extends mongoose_2.Document {
     twoFactorRecoveryCodes;
     faceIdEnabled;
     faceEmbedding;
+    friends;
+    friendRequests;
     createdAt;
     updatedAt;
 };
@@ -160,6 +162,23 @@ __decorate([
     (0, mongoose_1.Prop)({ type: [Number], default: [] }),
     __metadata("design:type", Array)
 ], User.prototype, "faceEmbedding", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: [{ type: String, ref: 'User' }], default: [] }),
+    __metadata("design:type", Array)
+], User.prototype, "friends", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: [
+            {
+                _id: String,
+                from: { type: Object, ref: 'User' },
+                createdAt: Date,
+            },
+        ],
+        default: [],
+    }),
+    __metadata("design:type", Array)
+], User.prototype, "friendRequests", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: Date, default: Date.now }),
     __metadata("design:type", Date)

@@ -285,6 +285,105 @@ let UsersService = class UsersService {
             throw new common_1.NotFoundException('User not found');
         return { message: 'Password reset successfully', tempPassword: password };
     }
+    async searchUsers(query) {
+        if (!query || typeof query !== 'string' || query.trim().length < 2) {
+            return { users: [] };
+        }
+        const users = await this.userModel
+            .find({
+            $or: [
+                { username: { $regex: query.trim(), $options: 'i' } },
+                { email: { $regex: query.trim(), $options: 'i' } },
+            ],
+        })
+            .select('username email profile statistics')
+            .limit(10)
+            .exec();
+        return { users };
+    }
+    async getFriends(userId) {
+        const user = await this.userModel
+            .findById(userId)
+            .populate('friends', 'username email profile statistics')
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return { friends: user.friends || [] };
+    }
+    async getFriendRequests(userId) {
+        const user = await this.userModel.findById(userId).exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return { requests: user.friendRequests || [] };
+    }
+    async sendFriendRequest(fromId, toId) {
+        if (fromId === toId) {
+            throw new common_1.BadRequestException('Cannot send friend request to yourself');
+        }
+        const toUser = await this.userModel.findById(toId);
+        if (!toUser) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const fromUser = await this.userModel.findById(fromId);
+        if (fromUser?.friends?.includes(toId)) {
+            throw new common_1.BadRequestException('Already friends');
+        }
+        const existingRequest = toUser.friendRequests?.find((req) => req.from?.toString() === fromId);
+        if (existingRequest) {
+            throw new common_1.BadRequestException('Friend request already sent');
+        }
+        if (!toUser.friendRequests) {
+            toUser.friendRequests = [];
+        }
+        toUser.friendRequests.push({
+            _id: new Date().getTime().toString(),
+            from: fromUser,
+            createdAt: new Date(),
+        });
+        await toUser.save();
+        return { message: 'Friend request sent successfully' };
+    }
+    async acceptFriendRequest(requestId) {
+        const user = await this.userModel.findOne({
+            'friendRequests._id': requestId,
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('Friend request not found');
+        }
+        const request = user.friendRequests.find((req) => req._id === requestId);
+        if (!request) {
+            throw new common_1.NotFoundException('Friend request not found');
+        }
+        const friendId = request.from._id || request.from;
+        if (!user.friends) {
+            user.friends = [];
+        }
+        user.friends.push(friendId);
+        user.friendRequests = user.friendRequests.filter((req) => req._id !== requestId);
+        await user.save();
+        const friend = await this.userModel.findById(friendId);
+        if (friend) {
+            if (!friend.friends) {
+                friend.friends = [];
+            }
+            friend.friends.push(user._id.toString());
+            await friend.save();
+        }
+        return { message: 'Friend request accepted' };
+    }
+    async rejectFriendRequest(requestId) {
+        const user = await this.userModel.findOne({
+            'friendRequests._id': requestId,
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('Friend request not found');
+        }
+        user.friendRequests = user.friendRequests.filter((req) => req._id !== requestId);
+        await user.save();
+        return { message: 'Friend request rejected' };
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([

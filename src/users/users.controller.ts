@@ -43,6 +43,45 @@ export class UsersController {
     return this.usersService.getLeaderboard(limit ? parseInt(limit) : 10);
   }
 
+  @Get('search')
+  @UseGuards(JwtAuthGuard)
+  searchUsers(@Query('q') query: string) {
+    return this.usersService.searchUsers(query);
+  }
+
+  @Get('friends')
+  @UseGuards(JwtAuthGuard)
+  getFriends(@Query('userId') userId: string) {
+    return this.usersService.getFriends(userId);
+  }
+
+  @Get('friend-requests')
+  @UseGuards(JwtAuthGuard)
+  getFriendRequests(@Query('userId') userId: string) {
+    return this.usersService.getFriendRequests(userId);
+  }
+
+  @Post('friend-request')
+  @UseGuards(JwtAuthGuard)
+  sendFriendRequest(@Body() body: { fromUserId: string; toUserId: string }) {
+    return this.usersService.sendFriendRequest(body.fromUserId, body.toUserId);
+  }
+
+  @Post('friend-request/:id/accept')
+  @UseGuards(JwtAuthGuard)
+  acceptFriendRequest(@Param('id') requestId: string, @Body() body: { userId?: string }) {
+    // For now, we'll use the simpler version that doesn't require userId
+    // The service will find the user by looking up who has this request
+    return this.usersService.acceptFriendRequest(requestId);
+  }
+
+  @Post('friend-request/:id/reject')
+  @UseGuards(JwtAuthGuard)
+  rejectFriendRequest(@Param('id') requestId: string, @Body() body: { userId?: string }) {
+    // For now, we'll use the simpler version that doesn't require userId
+    return this.usersService.rejectFriendRequest(requestId);
+  }
+
   // ── Admin-only routes ──────────────────────────────────────────────────────
 
   @Get('admin/analytics')
