@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
@@ -22,8 +23,14 @@ const create_user_dto_1 = require("./dto/create-user.dto");
 const update_user_dto_1 = require("./dto/update-user.dto");
 let UsersController = class UsersController {
     usersService;
-    constructor(usersService) {
+    configService;
+    internalApiKey;
+    constructor(usersService, configService) {
         this.usersService = usersService;
+        this.configService = configService;
+        this.internalApiKey =
+            this.configService.get('INTERNAL_API_KEY') ||
+                'bytebattle-internal-key';
     }
     create(createUserDto) {
         return this.usersService.create(createUserDto);
@@ -80,6 +87,12 @@ let UsersController = class UsersController {
         return this.usersService.update(id, updateUserDto);
     }
     updateStats(id, stats) {
+        return this.usersService.updateStats(id, stats);
+    }
+    updateStatsInternal(id, internalApiKey, stats) {
+        if (!internalApiKey || internalApiKey !== this.internalApiKey) {
+            throw new common_1.UnauthorizedException('Invalid internal API key');
+        }
         return this.usersService.updateStats(id, stats);
     }
     addAchievement(id, achievement) {
@@ -250,6 +263,15 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "updateStats", null);
 __decorate([
+    (0, common_1.Patch)(':id/stats/internal'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Headers)('x-internal-api-key')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "updateStatsInternal", null);
+__decorate([
     (0, common_1.Post)(':id/achievements'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
@@ -269,6 +291,7 @@ __decorate([
 ], UsersController.prototype, "addBadge", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
-    __metadata("design:paramtypes", [users_service_1.UsersService])
+    __metadata("design:paramtypes", [users_service_1.UsersService,
+        config_1.ConfigService])
 ], UsersController);
 //# sourceMappingURL=users.controller.js.map

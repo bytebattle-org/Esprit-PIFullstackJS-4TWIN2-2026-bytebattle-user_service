@@ -7,9 +7,12 @@ import {
   Param,
   Delete,
   Query,
+  Headers,
+  UnauthorizedException,
   ValidationPipe,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -19,7 +22,16 @@ import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  private readonly internalApiKey: string;
+
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
+  ) {
+    this.internalApiKey =
+      this.configService.get<string>('INTERNAL_API_KEY') ||
+      'bytebattle-internal-key';
+  }
 
   // ── Public routes (no auth required) ──────────────────────────────────────
 
@@ -167,6 +179,28 @@ export class UsersController {
       totalTimeCoding?: number;
     },
   ) {
+    return this.usersService.updateStats(id, stats);
+  }
+
+  @Patch(':id/stats/internal')
+  updateStatsInternal(
+    @Param('id') id: string,
+    @Headers('x-internal-api-key') internalApiKey: string,
+    @Body()
+    stats: {
+      totalPoints?: number;
+      level?: number;
+      currentStreak?: number;
+      xp?: number;
+      challengesCompleted?: number;
+      successRate?: number;
+      totalTimeCoding?: number;
+    },
+  ) {
+    if (!internalApiKey || internalApiKey !== this.internalApiKey) {
+      throw new UnauthorizedException('Invalid internal API key');
+    }
+
     return this.usersService.updateStats(id, stats);
   }
 

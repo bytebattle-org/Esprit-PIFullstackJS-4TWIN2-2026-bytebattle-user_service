@@ -1,9 +1,12 @@
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 export declare class UsersController {
     private readonly usersService;
-    constructor(usersService: UsersService);
+    private readonly configService;
+    private readonly internalApiKey;
+    constructor(usersService: UsersService, configService: ConfigService);
     create(createUserDto: CreateUserDto): Promise<import("./schemas/user.schema").User>;
     verifyEmail(body: {
         email: string;
@@ -80,6 +83,15 @@ export declare class UsersController {
     findOne(id: string): Promise<import("./schemas/user.schema").User>;
     update(id: string, updateUserDto: UpdateUserDto): Promise<import("./schemas/user.schema").User>;
     updateStats(id: string, stats: {
+        totalPoints?: number;
+        level?: number;
+        currentStreak?: number;
+        xp?: number;
+        challengesCompleted?: number;
+        successRate?: number;
+        totalTimeCoding?: number;
+    }): Promise<import("./schemas/user.schema").User>;
+    updateStatsInternal(id: string, internalApiKey: string, stats: {
         totalPoints?: number;
         level?: number;
         currentStreak?: number;
