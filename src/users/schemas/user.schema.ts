@@ -66,6 +66,22 @@ export class User extends Document {
   };
 
   @Prop({
+    type: {
+      currentStreak: { type: Number, default: 0 },
+      longestStreak: { type: Number, default: 0 },
+      lastCompletedDate: { type: Date },
+      totalDailyChallengesCompleted: { type: Number, default: 0 },
+    },
+    default: {},
+  })
+  dailyChallenge: {
+    currentStreak: number;
+    longestStreak: number;
+    lastCompletedDate?: Date;
+    totalDailyChallengesCompleted: number;
+  };
+
+  @Prop({
     type: [
       {
         id: String,

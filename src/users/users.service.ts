@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument, FriendRequest } from './schemas/user.schema';
+import { DailyChallenge, DailyChallengeDocument } from './schemas/daily-challenge.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { EmailService } from '../email/email.service';
@@ -11,6 +12,7 @@ import { EmailService } from '../email/email.service';
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(DailyChallenge.name) private dailyChallengeModel: Model<DailyChallengeDocument>,
     private emailService: EmailService,
   ) { }
 
@@ -469,5 +471,138 @@ export class UsersService {
     await user.save();
 
     return { message: 'Friend request rejected' };
+  }
+
+  // Daily Challenge Streak Methods
+
+  async getTodayDailyChallenge() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let dailyChallenge = await this.dailyChallengeModel.findOne({ date: today });
+
+    if (!dailyChallenge) {
+      // If no daily challenge exists for today, create one
+      // This would typically be done by a cron job, but we'll handle it here as fallback
+      throw new NotFoundException('No daily challenge available for today');
+    }
+
+    return dailyChallenge;
+  }
+
+  async completeDailyChallenge(userId: string, challengeId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find today's daily challenge
+    const dailyChallenge = await this.dailyChallengeModel.findOne({ date: today });
+
+    if (!dailyChallenge) {
+      throw new NotFoundException('No daily challenge available for today');
+    }
+
+    // Verify the challenge ID matches
+    if (dailyChallenge.challengeId.toString() !== challengeId) {
+      throw new BadRequestException('Challenge ID does not match today\'s daily challenge');
+    }
+
+    // Check if user already completed today's challenge
+    if (dailyChallenge.completedBy.includes(userId as any)) {
+      throw new BadRequestException('You have already completed today\'s daily challenge');
+    }
+
+    // Get user
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Initialize dailyChallenge object if it doesn't exist
+    if (!user.dailyChallenge) {
+      user.dailyChallenge = {
+        currentStreak: 0,
+        longestStreak: 0,
+        totalDailyChallengesCompleted: 0,
+      };
+    }
+
+    // Check if user completed yesterday's challenge
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const lastCompleted = user.dailyChallenge.lastCompletedDate;
+    const lastCompletedDate = lastCompleted ? new Date(lastCompleted) : null;
+
+    if (lastCompletedDate) {
+      lastCompletedDate.setHours(0, 0, 0, 0);
+    }
+
+    let streakIncreased = false;
+
+    if (!lastCompletedDate) {
+      // First time completing a daily challenge
+      user.dailyChallenge.currentStreak = 1;
+      streakIncreased = true;
+    } else if (lastCompletedDate.getTime() === yesterday.getTime()) {
+      // Completed yesterday, continue streak
+      user.dailyChallenge.currentStreak += 1;
+      streakIncreased = true;
+    } else if (lastCompletedDate.getTime() === today.getTime()) {
+      // Already completed today (shouldn't happen due to earlier check)
+      throw new BadRequestException('You have already completed today\'s daily challenge');
+    } else {
+      // Missed a day, reset streak
+      user.dailyChallenge.currentStreak = 1;
+    }
+
+    // Update longest streak
+    if (user.dailyChallenge.currentStreak > user.dailyChallenge.longestStreak) {
+      user.dailyChallenge.longestStreak = user.dailyChallenge.currentStreak;
+    }
+
+    // Update last completed date
+    user.dailyChallenge.lastCompletedDate = today;
+    user.dailyChallenge.totalDailyChallengesCompleted += 1;
+
+    // Award bonus XP
+    const bonusXp = dailyChallenge.bonusXp;
+    user.statistics.xp += bonusXp;
+    user.statistics.totalPoints += bonusXp;
+
+    // Add user to completed list
+    dailyChallenge.completedBy.push(userId as any);
+
+    // Save both documents
+    await user.save();
+    await dailyChallenge.save();
+
+    return {
+      message: 'Daily challenge completed successfully',
+      streak: user.dailyChallenge.currentStreak,
+      longestStreak: user.dailyChallenge.longestStreak,
+      bonusXp,
+      streakIncreased,
+    };
+  }
+
+  async getUserDailyChallengeStats(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dailyChallenge = await this.dailyChallengeModel.findOne({ date: today });
+    const completedToday = dailyChallenge?.completedBy.includes(userId as any) || false;
+
+    return {
+      currentStreak: user.dailyChallenge?.currentStreak || 0,
+      longestStreak: user.dailyChallenge?.longestStreak || 0,
+      lastCompletedDate: user.dailyChallenge?.lastCompletedDate,
+      totalDailyChallengesCompleted: user.dailyChallenge?.totalDailyChallengesCompleted || 0,
+      completedToday,
+    };
   }
 }

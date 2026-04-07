@@ -13,12 +13,14 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UsersService } from './users.service';
+import { DailyChallengeService } from './daily-challenge.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -28,6 +30,7 @@ export class UsersController {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly dailyChallengeService: DailyChallengeService,
     private readonly configService: ConfigService,
   ) {
     this.internalApiKey =
@@ -231,5 +234,41 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   addBadge(@Param('id') id: string, @Body('badge') badge: string) {
     return this.usersService.addBadge(id, badge);
+  }
+
+  // ── Daily Challenge Streak Routes ──────────────────────────────────────────
+
+  @Get('daily-challenge/today')
+  @UseGuards(JwtAuthGuard)
+  getTodayDailyChallenge() {
+    return this.usersService.getTodayDailyChallenge();
+  }
+
+  @Post(':id/daily-challenge/complete')
+  @UseGuards(JwtAuthGuard)
+  completeDailyChallenge(
+    @Param('id') id: string,
+    @Body('challengeId') challengeId: string,
+    @Request() req,
+  ) {
+    // Ensure user can only complete their own daily challenge
+    if (req.user.userId !== id) {
+      throw new ForbiddenException('You can only complete your own daily challenge');
+    }
+    return this.usersService.completeDailyChallenge(id, challengeId);
+  }
+
+  @Get(':id/daily-challenge/stats')
+  @UseGuards(JwtAuthGuard)
+  getUserDailyChallengeStats(@Param('id') id: string) {
+    return this.usersService.getUserDailyChallengeStats(id);
+  }
+
+  // Manual trigger for testing (admin only)
+  @Post('daily-challenge/create-manual')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async createDailyChallengeManual() {
+    return this.dailyChallengeService.createDailyChallengeManually();
   }
 }
