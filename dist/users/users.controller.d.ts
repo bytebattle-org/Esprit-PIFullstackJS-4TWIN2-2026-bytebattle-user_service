@@ -79,7 +79,7 @@ export declare class UsersController {
         message: string;
         tempPassword: string;
     }>;
-    remove(id: string): Promise<void>;
+    remove(id: string, req: any): Promise<void>;
     findOne(id: string): Promise<import("./schemas/user.schema").User>;
     update(id: string, updateUserDto: UpdateUserDto): Promise<import("./schemas/user.schema").User>;
     updateStats(id: string, stats: {

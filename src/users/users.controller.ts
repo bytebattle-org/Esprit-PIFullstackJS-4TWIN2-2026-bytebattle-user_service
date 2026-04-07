@@ -11,6 +11,8 @@ import {
   UnauthorizedException,
   ValidationPipe,
   UseGuards,
+  Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -141,9 +143,16 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  remove(@Param('id') id: string) {
+  @UseGuards(JwtAuthGuard)
+  remove(@Param('id') id: string, @Request() req) {
+    const requestingUserId = req.user.userId;
+    const requestingUserRole = req.user.role;
+    
+    // Allow users to delete their own account, or admins to delete any account
+    if (requestingUserId !== id && requestingUserRole !== 'admin') {
+      throw new ForbiddenException('You can only delete your own account');
+    }
+    
     return this.usersService.remove(id);
   }
 

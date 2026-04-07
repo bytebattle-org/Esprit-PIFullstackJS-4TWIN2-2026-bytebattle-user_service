@@ -77,7 +77,12 @@ let UsersController = class UsersController {
     resetPasswordAdmin(id, newPassword) {
         return this.usersService.resetPasswordAdmin(id, newPassword);
     }
-    remove(id) {
+    remove(id, req) {
+        const requestingUserId = req.user.userId;
+        const requestingUserRole = req.user.role;
+        if (requestingUserId !== id && requestingUserRole !== 'admin') {
+            throw new common_1.ForbiddenException('You can only delete your own account');
+        }
         return this.usersService.remove(id);
     }
     findOne(id) {
@@ -229,11 +234,11 @@ __decorate([
 ], UsersController.prototype, "resetPasswordAdmin", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('admin'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "remove", null);
 __decorate([
