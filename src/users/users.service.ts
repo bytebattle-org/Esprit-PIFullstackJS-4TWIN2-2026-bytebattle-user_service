@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -7,14 +7,88 @@ import { DailyChallenge, DailyChallengeDocument } from './schemas/daily-challeng
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { EmailService } from '../email/email.service';
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(DailyChallenge.name) private dailyChallengeModel: Model<DailyChallengeDocument>,
     private emailService: EmailService,
+    private readonly rabbitMQService: RabbitMQService,
   ) { }
+
+  async onModuleInit() {
+    // 📥 Subscribe to RabbitMQ events
+    await this.rabbitMQService.subscribe(async (routingKey, data) => {
+      try {
+        switch (routingKey) {
+          case 'battle.finished':
+            await this.handleBattleFinished(data);
+            break;
+          case 'battle.started':
+            await this.handleBattleStarted(data);
+            break;
+          default:
+            this.logger.debug(`Unhandled event: ${routingKey}`);
+        }
+      } catch (error) {
+        this.logger.error(`Error handling event ${routingKey}:`, error);
+        throw error; // Re-throw to trigger message requeue
+      }
+    });
+
+    this.logger.log('✅ User Service subscribed to RabbitMQ events');
+  }
+
+  /**
+   * Handle battle.finished event - Update user stats
+   */
+  private async handleBattleFinished(data: any): Promise<void> {
+    this.logger.log(`📥 Handling battle.finished event for battle ${data.battleId}`);
+
+    const { winnerId, winnerTeam, participants, mode } = data;
+
+    // Update stats for all participants
+    for (const participant of participants) {
+      try {
+        const isWinner = mode === 'team'
+          ? participant.team === winnerTeam
+          : participant.userId === winnerId;
+
+        const statsUpdate: any = {
+          challengesCompleted: 1,
+        };
+
+        if (isWinner) {
+          statsUpdate.totalPoints = participant.score || 100;
+          this.logger.log(`✅ Updating winner ${participant.username} with ${statsUpdate.totalPoints} points`);
+        } else {
+          statsUpdate.totalPoints = Math.floor((participant.score || 0) / 2); // Losers get half points
+          this.logger.log(`📊 Updating participant ${participant.username} with ${statsUpdate.totalPoints} points`);
+        }
+
+        await this.updateStats(participant.userId, statsUpdate);
+      } catch (error) {
+        this.logger.error(`Failed to update stats for user ${participant.userId}:`, error);
+      }
+    }
+
+    this.logger.log(`✅ Battle finished event processed for battle ${data.battleId}`);
+  }
+
+  /**
+   * Handle battle.started event - Mark users as in-game
+   */
+  private async handleBattleStarted(data: any): Promise<void> {
+    this.logger.log(`📥 Handling battle.started event for battle ${data.battleId}`);
+    
+    // You can add logic here to mark users as "in-game" if needed
+    // For now, just log it
+    this.logger.log(`Battle started with ${data.participants.length} participants`);
+  }
 
   private generateVerificationCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -62,6 +136,16 @@ export class UsersService {
     });
 
     await user.save();
+
+    // 📢 Emit user.created event
+    await this.rabbitMQService.emitUserCreated({
+      userId: user._id.toString(),
+      username: user.username,
+      email: user.email,
+      provider: 'local',
+    });
+
+    this.logger.log(`📢 User created event emitted for ${user.username}`);
 
     // Fire-and-forget email so registration response is not blocked by SMTP latency.
     void this.emailService

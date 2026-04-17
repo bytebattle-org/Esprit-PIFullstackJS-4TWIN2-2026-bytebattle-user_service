@@ -9,4 +9,21 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('health')
+  health() {
+    return {
+      status: 'UP',
+      timestamp: new Date(),
+    };
+  }
+
+  @Get('info')
+  info() {
+    return {
+      name: 'USER-SERVICE',
+      version: '1.0.0',
+      status: 'running',
+    };
+  }
 }

@@ -1,0 +1,556 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var UsersService_1;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UsersService = void 0;
+const common_1 = require("@nestjs/common");
+const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
+const bcrypt = __importStar(require("bcrypt"));
+const user_schema_1 = require("./schemas/user.schema");
+const daily_challenge_schema_1 = require("./schemas/daily-challenge.schema");
+const email_service_1 = require("../email/email.service");
+const rabbitmq_service_1 = require("../rabbitmq/rabbitmq.service");
+let UsersService = UsersService_1 = class UsersService {
+    userModel;
+    dailyChallengeModel;
+    emailService;
+    rabbitMQService;
+    logger = new common_1.Logger(UsersService_1.name);
+    constructor(userModel, dailyChallengeModel, emailService, rabbitMQService) {
+        this.userModel = userModel;
+        this.dailyChallengeModel = dailyChallengeModel;
+        this.emailService = emailService;
+        this.rabbitMQService = rabbitMQService;
+    }
+    async onModuleInit() {
+        await this.rabbitMQService.subscribe(async (routingKey, data) => {
+            try {
+                switch (routingKey) {
+                    case 'battle.finished':
+                        await this.handleBattleFinished(data);
+                        break;
+                    case 'battle.started':
+                        await this.handleBattleStarted(data);
+                        break;
+                    default:
+                        this.logger.debug(`Unhandled event: ${routingKey}`);
+                }
+            }
+            catch (error) {
+                this.logger.error(`Error handling event ${routingKey}:`, error);
+                throw error;
+            }
+        });
+        this.logger.log('✅ User Service subscribed to RabbitMQ events');
+    }
+    async handleBattleFinished(data) {
+        this.logger.log(`📥 Handling battle.finished event for battle ${data.battleId}`);
+        const { winnerId, winnerTeam, participants, mode } = data;
+        for (const participant of participants) {
+            try {
+                const isWinner = mode === 'team'
+                    ? participant.team === winnerTeam
+                    : participant.userId === winnerId;
+                const statsUpdate = {
+                    challengesCompleted: 1,
+                };
+                if (isWinner) {
+                    statsUpdate.totalPoints = participant.score || 100;
+                    this.logger.log(`✅ Updating winner ${participant.username} with ${statsUpdate.totalPoints} points`);
+                }
+                else {
+                    statsUpdate.totalPoints = Math.floor((participant.score || 0) / 2);
+                    this.logger.log(`📊 Updating participant ${participant.username} with ${statsUpdate.totalPoints} points`);
+                }
+                await this.updateStats(participant.userId, statsUpdate);
+            }
+            catch (error) {
+                this.logger.error(`Failed to update stats for user ${participant.userId}:`, error);
+            }
+        }
+        this.logger.log(`✅ Battle finished event processed for battle ${data.battleId}`);
+    }
+    async handleBattleStarted(data) {
+        this.logger.log(`📥 Handling battle.started event for battle ${data.battleId}`);
+        this.logger.log(`Battle started with ${data.participants.length} participants`);
+    }
+    generateVerificationCode() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    async create(createUserDto) {
+        const { username, email, password } = createUserDto;
+        const existingUser = await this.userModel.findOne({
+            $or: [{ email }, { username }],
+        });
+        if (existingUser) {
+            throw new common_1.ConflictException('Username or email already exists');
+        }
+        const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
+        const verificationCode = this.generateVerificationCode();
+        const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+        const user = new this.userModel({
+            username,
+            email,
+            passwordHash,
+            verificationCode,
+            verificationCodeExpires,
+            isEmailVerified: false,
+            provider: 'local',
+            statistics: {
+                totalPoints: 0,
+                level: 1,
+                currentStreak: 0,
+                xp: 0,
+                challengesCompleted: 0,
+                successRate: 0,
+                totalTimeCoding: 0,
+            },
+            profile: {},
+            achievements: [],
+            badges: [],
+        });
+        await user.save();
+        await this.rabbitMQService.emitUserCreated({
+            userId: user._id.toString(),
+            username: user.username,
+            email: user.email,
+            provider: 'local',
+        });
+        this.logger.log(`📢 User created event emitted for ${user.username}`);
+        void this.emailService
+            .sendVerificationEmail(email, verificationCode, username)
+            .catch((error) => {
+            console.error('Failed to send verification email:', error);
+        });
+        return user;
+    }
+    async verifyEmail(email, code) {
+        const user = await this.userModel.findOne({ email });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        if (user.isEmailVerified) {
+            throw new common_1.BadRequestException('Email already verified');
+        }
+        if (user.verificationCode !== code) {
+            throw new common_1.BadRequestException('Invalid verification code');
+        }
+        if (!user.verificationCodeExpires || user.verificationCodeExpires < new Date()) {
+            throw new common_1.BadRequestException('Verification code expired');
+        }
+        user.isEmailVerified = true;
+        user.verificationCode = undefined;
+        user.verificationCodeExpires = undefined;
+        await user.save();
+        try {
+            await this.emailService.sendWelcomeEmail(email, user.username);
+        }
+        catch (error) {
+            console.error('Failed to send welcome email:', error);
+        }
+        const { passwordHash, ...userResponse } = user.toObject();
+        return {
+            message: 'Email verified successfully',
+            user: userResponse,
+        };
+    }
+    async resendVerificationCode(email) {
+        const user = await this.userModel.findOne({ email });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        if (user.isEmailVerified) {
+            throw new common_1.BadRequestException('Email already verified');
+        }
+        const verificationCode = this.generateVerificationCode();
+        const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+        user.verificationCode = verificationCode;
+        user.verificationCodeExpires = verificationCodeExpires;
+        await user.save();
+        try {
+            await this.emailService.sendVerificationEmail(email, verificationCode, user.username);
+        }
+        catch (error) {
+            console.error('Failed to resend verification email:', error);
+            throw new common_1.BadRequestException('Failed to send verification email');
+        }
+        return { message: 'Verification code sent successfully' };
+    }
+    async findAll() {
+        return this.userModel.find().select('-passwordHash').exec();
+    }
+    async findOne(id) {
+        const user = await this.userModel.findById(id).select('-passwordHash').exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
+    async findByEmail(email) {
+        return this.userModel.findOne({ email }).exec();
+    }
+    async findByUsername(username) {
+        return this.userModel.findOne({ username }).exec();
+    }
+    async update(id, updateUserDto) {
+        const updateData = {};
+        if (updateUserDto.username)
+            updateData.username = updateUserDto.username;
+        if (updateUserDto.email)
+            updateData.email = updateUserDto.email;
+        if (updateUserDto.password) {
+            updateData.passwordHash = await bcrypt.hash(updateUserDto.password, 10);
+        }
+        if (updateUserDto.avatar || updateUserDto.bio || updateUserDto.preferredLanguages) {
+            if (updateUserDto.avatar)
+                updateData['profile.avatar'] = updateUserDto.avatar;
+            if (updateUserDto.bio)
+                updateData['profile.bio'] = updateUserDto.bio;
+            if (updateUserDto.preferredLanguages) {
+                updateData['profile.preferredLanguages'] = updateUserDto.preferredLanguages;
+            }
+        }
+        const user = await this.userModel
+            .findByIdAndUpdate(id, updateData, { new: true })
+            .select('-passwordHash')
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
+    async remove(id) {
+        const result = await this.userModel.findByIdAndDelete(id).exec();
+        if (!result) {
+            throw new common_1.NotFoundException('User not found');
+        }
+    }
+    async updateStats(id, stats) {
+        const updateData = {};
+        Object.keys(stats).forEach((key) => {
+            updateData[`statistics.${key}`] = stats[key];
+        });
+        const user = await this.userModel
+            .findByIdAndUpdate(id, { $inc: updateData }, { new: true })
+            .select('-passwordHash')
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
+    async addAchievement(id, achievement) {
+        const user = await this.userModel
+            .findByIdAndUpdate(id, {
+            $addToSet: {
+                achievements: {
+                    ...achievement,
+                    unlockedAt: new Date(),
+                },
+            },
+        }, { new: true })
+            .select('-passwordHash')
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
+    async addBadge(id, badge) {
+        const user = await this.userModel
+            .findByIdAndUpdate(id, { $addToSet: { badges: badge } }, { new: true })
+            .select('-passwordHash')
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
+    async getLeaderboard(limit = 10) {
+        return this.userModel
+            .find()
+            .select('-passwordHash')
+            .sort({ 'statistics.xp': -1, 'statistics.totalPoints': -1 })
+            .limit(limit)
+            .exec();
+    }
+    async getAdminAnalytics() {
+        const totalUsers = await this.userModel.countDocuments();
+        const activeUsers = await this.userModel.countDocuments({
+            updatedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+        });
+        return {
+            totalUsers,
+            activeUsers,
+        };
+    }
+    async updateRole(id, role) {
+        if (!['user', 'admin'].includes(role)) {
+            throw new common_1.BadRequestException('Invalid role');
+        }
+        const user = await this.userModel.findByIdAndUpdate(id, { role }, { new: true }).select('-passwordHash').exec();
+        if (!user)
+            throw new common_1.NotFoundException('User not found');
+        return user;
+    }
+    async updateStatus(id, isBanned) {
+        const user = await this.userModel.findByIdAndUpdate(id, { isBanned }, { new: true }).select('-passwordHash').exec();
+        if (!user)
+            throw new common_1.NotFoundException('User not found');
+        return user;
+    }
+    async resetPasswordAdmin(id, newPassword) {
+        const password = newPassword || Math.random().toString(36).slice(-8);
+        const passwordHash = await bcrypt.hash(password, 10);
+        const user = await this.userModel.findByIdAndUpdate(id, { passwordHash }, { new: true }).select('-passwordHash').exec();
+        if (!user)
+            throw new common_1.NotFoundException('User not found');
+        return { message: 'Password reset successfully', tempPassword: password };
+    }
+    async searchUsers(query) {
+        if (!query || typeof query !== 'string' || query.trim().length < 2) {
+            return { users: [] };
+        }
+        const users = await this.userModel
+            .find({
+            $or: [
+                { username: { $regex: query.trim(), $options: 'i' } },
+                { email: { $regex: query.trim(), $options: 'i' } },
+            ],
+        })
+            .select('username email profile statistics')
+            .limit(10)
+            .exec();
+        return { users };
+    }
+    async getFriends(userId) {
+        const user = await this.userModel
+            .findById(userId)
+            .populate('friends', 'username email profile statistics')
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return { friends: user.friends || [] };
+    }
+    async getFriendRequests(userId) {
+        const user = await this.userModel.findById(userId).exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return { requests: user.friendRequests || [] };
+    }
+    async sendFriendRequest(fromId, toId) {
+        if (fromId === toId) {
+            throw new common_1.BadRequestException('Cannot send friend request to yourself');
+        }
+        const toUser = await this.userModel.findById(toId);
+        if (!toUser) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const fromUser = await this.userModel.findById(fromId);
+        if (fromUser?.friends?.includes(toId)) {
+            throw new common_1.BadRequestException('Already friends');
+        }
+        const existingRequest = toUser.friendRequests?.find((req) => req.from?.toString() === fromId);
+        if (existingRequest) {
+            throw new common_1.BadRequestException('Friend request already sent');
+        }
+        if (!toUser.friendRequests) {
+            toUser.friendRequests = [];
+        }
+        toUser.friendRequests.push({
+            _id: new Date().getTime().toString(),
+            from: fromUser,
+            createdAt: new Date(),
+        });
+        await toUser.save();
+        return { message: 'Friend request sent successfully' };
+    }
+    async acceptFriendRequest(requestId) {
+        const user = await this.userModel.findOne({
+            'friendRequests._id': requestId,
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('Friend request not found');
+        }
+        const request = user.friendRequests.find((req) => req._id === requestId);
+        if (!request) {
+            throw new common_1.NotFoundException('Friend request not found');
+        }
+        const friendId = request.from._id || request.from;
+        if (!user.friends) {
+            user.friends = [];
+        }
+        user.friends.push(friendId);
+        user.friendRequests = user.friendRequests.filter((req) => req._id !== requestId);
+        await user.save();
+        const friend = await this.userModel.findById(friendId);
+        if (friend) {
+            if (!friend.friends) {
+                friend.friends = [];
+            }
+            friend.friends.push(user._id.toString());
+            await friend.save();
+        }
+        return { message: 'Friend request accepted' };
+    }
+    async rejectFriendRequest(requestId) {
+        const user = await this.userModel.findOne({
+            'friendRequests._id': requestId,
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('Friend request not found');
+        }
+        user.friendRequests = user.friendRequests.filter((req) => req._id !== requestId);
+        await user.save();
+        return { message: 'Friend request rejected' };
+    }
+    async getTodayDailyChallenge() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let dailyChallenge = await this.dailyChallengeModel.findOne({ date: today });
+        if (!dailyChallenge) {
+            throw new common_1.NotFoundException('No daily challenge available for today');
+        }
+        return dailyChallenge;
+    }
+    async completeDailyChallenge(userId, challengeId) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dailyChallenge = await this.dailyChallengeModel.findOne({ date: today });
+        if (!dailyChallenge) {
+            throw new common_1.NotFoundException('No daily challenge available for today');
+        }
+        if (dailyChallenge.challengeId.toString() !== challengeId) {
+            throw new common_1.BadRequestException('Challenge ID does not match today\'s daily challenge');
+        }
+        if (dailyChallenge.completedBy.includes(userId)) {
+            throw new common_1.BadRequestException('You have already completed today\'s daily challenge');
+        }
+        const user = await this.userModel.findById(userId);
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        if (!user.dailyChallenge) {
+            user.dailyChallenge = {
+                currentStreak: 0,
+                longestStreak: 0,
+                totalDailyChallengesCompleted: 0,
+            };
+        }
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const lastCompleted = user.dailyChallenge.lastCompletedDate;
+        const lastCompletedDate = lastCompleted ? new Date(lastCompleted) : null;
+        if (lastCompletedDate) {
+            lastCompletedDate.setHours(0, 0, 0, 0);
+        }
+        let streakIncreased = false;
+        if (!lastCompletedDate) {
+            user.dailyChallenge.currentStreak = 1;
+            streakIncreased = true;
+        }
+        else if (lastCompletedDate.getTime() === yesterday.getTime()) {
+            user.dailyChallenge.currentStreak += 1;
+            streakIncreased = true;
+        }
+        else if (lastCompletedDate.getTime() === today.getTime()) {
+            throw new common_1.BadRequestException('You have already completed today\'s daily challenge');
+        }
+        else {
+            user.dailyChallenge.currentStreak = 1;
+        }
+        if (user.dailyChallenge.currentStreak > user.dailyChallenge.longestStreak) {
+            user.dailyChallenge.longestStreak = user.dailyChallenge.currentStreak;
+        }
+        user.dailyChallenge.lastCompletedDate = today;
+        user.dailyChallenge.totalDailyChallengesCompleted += 1;
+        const bonusXp = dailyChallenge.bonusXp;
+        user.statistics.xp += bonusXp;
+        user.statistics.totalPoints += bonusXp;
+        dailyChallenge.completedBy.push(userId);
+        await user.save();
+        await dailyChallenge.save();
+        return {
+            message: 'Daily challenge completed successfully',
+            streak: user.dailyChallenge.currentStreak,
+            longestStreak: user.dailyChallenge.longestStreak,
+            bonusXp,
+            streakIncreased,
+        };
+    }
+    async getUserDailyChallengeStats(userId) {
+        const user = await this.userModel.findById(userId);
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dailyChallenge = await this.dailyChallengeModel.findOne({ date: today });
+        const completedToday = dailyChallenge?.completedBy.includes(userId) || false;
+        return {
+            currentStreak: user.dailyChallenge?.currentStreak || 0,
+            longestStreak: user.dailyChallenge?.longestStreak || 0,
+            lastCompletedDate: user.dailyChallenge?.lastCompletedDate,
+            totalDailyChallengesCompleted: user.dailyChallenge?.totalDailyChallengesCompleted || 0,
+            completedToday,
+        };
+    }
+};
+exports.UsersService = UsersService;
+exports.UsersService = UsersService = UsersService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __param(0, (0, mongoose_1.InjectModel)(user_schema_1.User.name)),
+    __param(1, (0, mongoose_1.InjectModel)(daily_challenge_schema_1.DailyChallenge.name)),
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        mongoose_2.Model,
+        email_service_1.EmailService,
+        rabbitmq_service_1.RabbitMQService])
+], UsersService);
+//# sourceMappingURL=users.service.js.map

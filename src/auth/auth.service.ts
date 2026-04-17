@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -6,14 +6,18 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { EmailService } from '../email/email.service';
+import { RabbitMQService } from '../rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
     private configService: ConfigService,
     private emailService: EmailService,
+    private readonly rabbitMQService: RabbitMQService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -50,6 +54,15 @@ export class AuthService {
         message: 'Please enter your 2FA code',
       };
     }
+
+    // 📢 Emit user.logged_in event
+    await this.rabbitMQService.emitUserLoggedIn({
+      userId: user._id.toString(),
+      username: user.username,
+      email: user.email,
+    });
+
+    this.logger.log(`📢 User logged in event emitted for ${user.username}`);
 
     return this.generateTokens(user);
   }
@@ -272,6 +285,8 @@ export class AuthService {
       provider,
     });
 
+    let isNewUser = false;
+
     if (user) {
       // User exists, update last login
       user.updatedAt = new Date();
@@ -294,6 +309,7 @@ export class AuthService {
         user = existingUser;
       } else {
         // Create new user
+        isNewUser = true;
         user = new this.userModel({
           email,
           username: await this.generateUniqueUsername(username),
@@ -317,6 +333,16 @@ export class AuthService {
           badges: [],
         });
         await user.save();
+
+        // 📢 Emit user.created event for new OAuth users
+        await this.rabbitMQService.emitUserCreated({
+          userId: user._id.toString(),
+          username: user.username,
+          email: user.email,
+          provider,
+        });
+
+        this.logger.log(`📢 User created event emitted for ${user.username} (OAuth)`);
       }
     }
 

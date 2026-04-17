@@ -15,6 +15,7 @@ import { TwoFactorService } from './two-factor/two-factor.service';
 import { TwoFactorController } from './two-factor/two-factor.controller';
 import { FaceIdService } from './faceid/faceid.service';
 import { FaceIdController } from './faceid/faceid.controller';
+import { RabbitMQModule } from '../rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { FaceIdController } from './faceid/faceid.controller';
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     EmailModule,
+    RabbitMQModule,
   ],
   controllers: [AuthController, TwoFactorController, FaceIdController],
   providers: [

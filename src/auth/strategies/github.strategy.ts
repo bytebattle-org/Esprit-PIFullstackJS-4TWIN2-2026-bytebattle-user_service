@@ -26,7 +26,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       clientID,
       clientSecret,
       callbackURL: callbackURL || 'http://localhost:3001/auth/github/callback',
-      scope: ['user:email'],
+      scope: ['user:email', 'read:user'],
     });
   }
 
@@ -36,12 +36,26 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     profile: any,
     done: Function,
   ): Promise<any> {
-    const { id, username, emails, photos } = profile;
+    const { id, username, displayName, emails, photos, _json } = profile;
+    
+    // Try to get email from multiple sources
+    let email: string;
+    if (emails && emails[0]) {
+      email = emails[0].value;
+    } else if (_json && _json.email) {
+      email = _json.email;
+    } else {
+      // Fallback: use username@github.com
+      email = `${username}@github.com`;
+    }
+    
+    // Use displayName if available, otherwise use username
+    const name = displayName || username || 'GitHub User';
     
     const user = {
       providerId: id,
-      email: emails && emails[0] ? emails[0].value : `${username}@github.com`,
-      username: username,
+      email: email,
+      username: name,
       avatar: photos && photos[0] ? photos[0].value : null,
       provider: 'github',
     };

@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { EurekaModule } from './eureka/eureka.module';
+import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { EurekaModule } from './eureka/eureka.module';
     UsersModule,
     AuthModule,
     EurekaModule,
+    RabbitMQModule,
   ],
   controllers: [AppController],
   providers: [AppService],
