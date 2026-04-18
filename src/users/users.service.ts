@@ -48,35 +48,9 @@ export class UsersService implements OnModuleInit {
    */
   private async handleBattleFinished(data: any): Promise<void> {
     this.logger.log(`📥 Handling battle.finished event for battle ${data.battleId}`);
-
-    const { winnerId, winnerTeam, participants, mode } = data;
-
-    // Update stats for all participants
-    for (const participant of participants) {
-      try {
-        const isWinner = mode === 'team'
-          ? participant.team === winnerTeam
-          : participant.userId === winnerId;
-
-        const statsUpdate: any = {
-          challengesCompleted: 1,
-        };
-
-        if (isWinner) {
-          statsUpdate.totalPoints = participant.score || 100;
-          this.logger.log(`✅ Updating winner ${participant.username} with ${statsUpdate.totalPoints} points`);
-        } else {
-          statsUpdate.totalPoints = Math.floor((participant.score || 0) / 2); // Losers get half points
-          this.logger.log(`📊 Updating participant ${participant.username} with ${statsUpdate.totalPoints} points`);
-        }
-
-        await this.updateStats(participant.userId, statsUpdate);
-      } catch (error) {
-        this.logger.error(`Failed to update stats for user ${participant.userId}:`, error);
-      }
-    }
-
-    this.logger.log(`✅ Battle finished event processed for battle ${data.battleId}`);
+    this.logger.log(
+      `Battle finished payload received with ${data.participants?.length || 0} participants and winner team ${data.winnerTeam || 'n/a'}`,
+    );
   }
 
   /**
