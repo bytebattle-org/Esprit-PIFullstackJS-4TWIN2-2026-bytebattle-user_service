@@ -124,6 +124,7 @@ let UsersService = UsersService_1 = class UsersService {
                 currentStreak: 0,
                 xp: 0,
                 challengesCompleted: 0,
+                challengesAttempted: 0,
                 successRate: 0,
                 totalTimeCoding: 0,
             },
@@ -259,7 +260,64 @@ let UsersService = UsersService_1 = class UsersService {
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
+        if (stats.xp || stats.totalPoints) {
+            const totalXp = user.statistics.xp || user.statistics.totalPoints || 0;
+            const calculatedLevel = this.calculateLevelFromXp(totalXp);
+            if (calculatedLevel !== user.statistics.level) {
+                user.statistics.level = calculatedLevel;
+            }
+        }
+        if (stats.challengesCompleted || stats.challengesAttempted) {
+            const completed = user.statistics.challengesCompleted || 0;
+            const attempted = user.statistics.challengesAttempted || 0;
+            if (attempted > 0) {
+                user.statistics.successRate = Math.round((completed / attempted) * 100);
+            }
+            else {
+                user.statistics.successRate = 0;
+            }
+        }
+        if (stats.xp || stats.totalPoints || stats.challengesCompleted || stats.challengesAttempted) {
+            await user.save();
+        }
         return user;
+    }
+    calculateLevelFromXp(totalXp) {
+        const BASE_LEVEL_XP = 40;
+        const LEVEL_MULTIPLIER = 1.3;
+        let remainingXp = Math.max(0, Math.floor(totalXp));
+        let level = 1;
+        let neededForNext = Math.max(1, Math.round(BASE_LEVEL_XP * Math.pow(LEVEL_MULTIPLIER, level - 1)));
+        while (remainingXp >= neededForNext) {
+            remainingXp -= neededForNext;
+            level += 1;
+            neededForNext = Math.max(1, Math.round(BASE_LEVEL_XP * Math.pow(LEVEL_MULTIPLIER, level - 1)));
+        }
+        return level;
+    }
+    async recalculateAllLevels() {
+        this.logger.log('🔄 Starting level recalculation for all users...');
+        const users = await this.userModel.find().exec();
+        let updated = 0;
+        let errors = 0;
+        for (const user of users) {
+            try {
+                const totalXp = user.statistics.xp || user.statistics.totalPoints || 0;
+                const calculatedLevel = this.calculateLevelFromXp(totalXp);
+                if (calculatedLevel !== user.statistics.level) {
+                    user.statistics.level = calculatedLevel;
+                    await user.save();
+                    updated++;
+                    this.logger.log(`✅ Updated ${user.username}: Level ${user.statistics.level} (${totalXp} XP)`);
+                }
+            }
+            catch (error) {
+                errors++;
+                this.logger.error(`❌ Error updating ${user.username}:`, error);
+            }
+        }
+        this.logger.log(`✅ Level recalculation complete: ${updated} updated, ${errors} errors`);
+        return { updated, errors };
     }
     async addAchievement(id, achievement) {
         const user = await this.userModel

@@ -50,6 +50,7 @@ export class User extends Document {
       currentStreak: { type: Number, default: 0 },
       xp: { type: Number, default: 0 },
       challengesCompleted: { type: Number, default: 0 },
+      challengesAttempted: { type: Number, default: 0 },
       successRate: { type: Number, default: 0 },
       totalTimeCoding: { type: Number, default: 0 },
     },
@@ -61,6 +62,7 @@ export class User extends Document {
     currentStreak: number;
     xp: number;
     challengesCompleted: number;
+    challengesAttempted: number;
     successRate: number;
     totalTimeCoding: number;
   };

@@ -187,6 +187,7 @@ export class UsersController {
       currentStreak?: number;
       xp?: number;
       challengesCompleted?: number;
+      challengesAttempted?: number;
       successRate?: number;
       totalTimeCoding?: number;
     },
@@ -205,6 +206,7 @@ export class UsersController {
       currentStreak?: number;
       xp?: number;
       challengesCompleted?: number;
+      challengesAttempted?: number;
       successRate?: number;
       totalTimeCoding?: number;
     },
@@ -214,6 +216,15 @@ export class UsersController {
     }
 
     return this.usersService.updateStats(id, stats);
+  }
+
+  @Post('recalculate-levels')
+  async recalculateLevels(@Headers('x-internal-api-key') internalApiKey: string) {
+    if (!internalApiKey || internalApiKey !== this.internalApiKey) {
+      throw new UnauthorizedException('Invalid internal API key');
+    }
+
+    return this.usersService.recalculateAllLevels();
   }
 
   @Post(':id/achievements')

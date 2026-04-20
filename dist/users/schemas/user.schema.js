@@ -94,6 +94,7 @@ __decorate([
             currentStreak: { type: Number, default: 0 },
             xp: { type: Number, default: 0 },
             challengesCompleted: { type: Number, default: 0 },
+            challengesAttempted: { type: Number, default: 0 },
             successRate: { type: Number, default: 0 },
             totalTimeCoding: { type: Number, default: 0 },
         },

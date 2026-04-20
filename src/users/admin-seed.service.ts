@@ -77,6 +77,7 @@ export class AdminSeedService implements OnModuleInit {
         currentStreak: 0,
         xp: 0,
         challengesCompleted: 0,
+        challengesAttempted: 0,
         successRate: 0,
         totalTimeCoding: 0,
       },

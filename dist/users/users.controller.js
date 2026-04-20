@@ -103,6 +103,12 @@ let UsersController = class UsersController {
         }
         return this.usersService.updateStats(id, stats);
     }
+    async recalculateLevels(internalApiKey) {
+        if (!internalApiKey || internalApiKey !== this.internalApiKey) {
+            throw new common_1.UnauthorizedException('Invalid internal API key');
+        }
+        return this.usersService.recalculateAllLevels();
+    }
     addAchievement(id, achievement) {
         return this.usersService.addAchievement(id, achievement);
     }
@@ -294,6 +300,13 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "updateStatsInternal", null);
+__decorate([
+    (0, common_1.Post)('recalculate-levels'),
+    __param(0, (0, common_1.Headers)('x-internal-api-key')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "recalculateLevels", null);
 __decorate([
     (0, common_1.Post)(':id/achievements'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

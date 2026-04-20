@@ -37,9 +37,15 @@ export declare class UsersService implements OnModuleInit {
         currentStreak?: number;
         xp?: number;
         challengesCompleted?: number;
+        challengesAttempted?: number;
         successRate?: number;
         totalTimeCoding?: number;
     }): Promise<User>;
+    private calculateLevelFromXp;
+    recalculateAllLevels(): Promise<{
+        updated: number;
+        errors: number;
+    }>;
     addAchievement(id: string, achievement: {
         id: string;
         name: string;

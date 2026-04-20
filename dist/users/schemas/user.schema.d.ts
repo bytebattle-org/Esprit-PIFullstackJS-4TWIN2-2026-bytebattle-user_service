@@ -20,6 +20,7 @@ export declare class User extends Document {
         currentStreak: number;
         xp: number;
         challengesCompleted: number;
+        challengesAttempted: number;
         successRate: number;
         totalTimeCoding: number;
     };
@@ -180,6 +181,7 @@ export declare const UserSchema: import("mongoose").Schema<User, import("mongoos
         currentStreak: number;
         xp: number;
         challengesCompleted: number;
+        challengesAttempted: number;
         successRate: number;
         totalTimeCoding: number;
     }, User, Document<unknown, {}, User, {

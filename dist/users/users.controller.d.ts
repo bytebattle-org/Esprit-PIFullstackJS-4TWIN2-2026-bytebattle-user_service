@@ -90,6 +90,7 @@ export declare class UsersController {
         currentStreak?: number;
         xp?: number;
         challengesCompleted?: number;
+        challengesAttempted?: number;
         successRate?: number;
         totalTimeCoding?: number;
     }): Promise<import("./schemas/user.schema").User>;
@@ -99,9 +100,14 @@ export declare class UsersController {
         currentStreak?: number;
         xp?: number;
         challengesCompleted?: number;
+        challengesAttempted?: number;
         successRate?: number;
         totalTimeCoding?: number;
     }): Promise<import("./schemas/user.schema").User>;
+    recalculateLevels(internalApiKey: string): Promise<{
+        updated: number;
+        errors: number;
+    }>;
     addAchievement(id: string, achievement: {
         id: string;
         name: string;
