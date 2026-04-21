@@ -14,6 +14,7 @@ import {
   Request,
   ForbiddenException,
   Inject,
+  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -50,6 +51,16 @@ export class UsersController {
     return this.usersService.verifyEmail(body.email, body.code);
   }
 
+  @Get('search2/:username')
+async searchUserss(@Param('username') username: string) {
+  const user = await this.usersService.findByUsername(username);
+
+  if (!user) {
+    throw new NotFoundException(`User "${username}" not found`);
+  }
+
+  return user;
+}
   @Post('resend-verification')
   resendVerification(@Body() body: { email: string }) {
     return this.usersService.resendVerificationCode(body.email);

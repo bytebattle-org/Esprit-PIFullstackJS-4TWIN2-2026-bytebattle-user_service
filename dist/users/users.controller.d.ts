@@ -17,6 +17,7 @@ export declare class UsersController {
         message: string;
         user: any;
     }>;
+    searchUserss(username: string): Promise<import("./schemas/user.schema").UserDocument>;
     resendVerification(body: {
         email: string;
     }): Promise<{

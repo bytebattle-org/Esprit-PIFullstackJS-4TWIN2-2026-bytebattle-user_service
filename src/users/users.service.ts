@@ -718,6 +718,8 @@ export class UsersService implements OnModuleInit {
       streakIncreased,
     };
   }
+  
+  
 
   async getUserDailyChallengeStats(userId: string) {
     const user = await this.userModel.findById(userId);
@@ -739,4 +741,5 @@ export class UsersService implements OnModuleInit {
       completedToday,
     };
   }
+
 }

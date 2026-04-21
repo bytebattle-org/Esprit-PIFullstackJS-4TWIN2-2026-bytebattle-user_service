@@ -41,6 +41,13 @@ let UsersController = class UsersController {
     verifyEmail(body) {
         return this.usersService.verifyEmail(body.email, body.code);
     }
+    async searchUserss(username) {
+        const user = await this.usersService.findByUsername(username);
+        if (!user) {
+            throw new common_1.NotFoundException(`User "${username}" not found`);
+        }
+        return user;
+    }
     resendVerification(body) {
         return this.usersService.resendVerificationCode(body.email);
     }
@@ -146,6 +153,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "verifyEmail", null);
+__decorate([
+    (0, common_1.Get)('search2/:username'),
+    __param(0, (0, common_1.Param)('username')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "searchUserss", null);
 __decorate([
     (0, common_1.Post)('resend-verification'),
     __param(0, (0, common_1.Body)()),
