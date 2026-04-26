@@ -1,0 +1,112 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  parameters {
+    string(name: 'CD_JOB_NAME', defaultValue: 'user-service-cd', description: 'Jenkins CD job name to trigger after CI success')
+    string(name: 'IMAGE_TAG', defaultValue: '', description: 'Optional Docker image tag override. Defaults to BUILD_NUMBER')
+    booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip tests (not recommended)')
+    booleanParam(name: 'RUN_SONAR', defaultValue: true, description: 'Run SonarQube analysis and quality gate')
+    string(name: 'SONAR_PROJECT_KEY', defaultValue: 'bytebattle-user-service', description: 'SonarQube project key')
+  }
+
+  environment {
+    SERVICE_DIR = 'user-service'
+    WORK_DIR = '.'
+  }
+
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+
+    stage('Resolve Working Directory') {
+      steps {
+        script {
+          env.WORK_DIR = fileExists("${env.SERVICE_DIR}/package.json") ? env.SERVICE_DIR : '.'
+          echo "Using WORK_DIR=${env.WORK_DIR}"
+        }
+      }
+    }
+
+    stage('Install') {
+      steps {
+        dir(env.WORK_DIR) {
+          sh 'if [ -f package-lock.json ]; then npm ci; else npm install; fi'
+        }
+      }
+    }
+
+    stage('Test') {
+      when { expression { !params.SKIP_TESTS } }
+      steps { dir(env.WORK_DIR) { sh 'npm run test:cov' } }
+    }
+
+    stage('Build') {
+      steps { dir(env.WORK_DIR) { sh 'npm run build' } }
+    }
+
+    stage('SonarQube Analysis') {
+      when { expression { params.RUN_SONAR } }
+      steps {
+        script {
+          def scannerHome = tool 'SonarScanner'
+          withSonarQubeEnv('SonarQube') {
+            dir(env.WORK_DIR) {
+              sh """
+                ${scannerHome}/bin/sonar-scanner \
+                  -Dsonar.projectKey=${params.SONAR_PROJECT_KEY} \
+                  -Dsonar.projectName=${params.SONAR_PROJECT_KEY} \
+                  -Dsonar.projectVersion=${env.BUILD_NUMBER} \
+                  -Dsonar.sources=src \
+                  -Dsonar.tests=test \
+                  -Dsonar.test.inclusions=**/*.spec.ts,**/*.test.ts \
+                  -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/coverage/** \
+                  -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+              """
+            }
+          }
+        }
+      }
+    }
+
+    stage('Quality Gate') {
+      when { expression { params.RUN_SONAR } }
+      steps {
+        timeout(time: 10, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Prepare Tag') {
+      steps {
+        script {
+          env.RESOLVED_IMAGE_TAG = params.IMAGE_TAG?.trim() ? params.IMAGE_TAG.trim() : env.BUILD_NUMBER
+        }
+      }
+    }
+
+    stage('Trigger CD') {
+      when { expression { params.CD_JOB_NAME?.trim() } }
+      steps {
+        build job: params.CD_JOB_NAME,
+          wait: false,
+          parameters: [
+            string(name: 'IMAGE_TAG', value: env.RESOLVED_IMAGE_TAG),
+            string(name: 'SOURCE_GIT_COMMIT', value: env.GIT_COMMIT ?: ''),
+            string(name: 'SOURCE_BRANCH', value: env.BRANCH_NAME ?: 'main')
+          ]
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'dist/**,coverage/**,user-service/dist/**,user-service/coverage/**', allowEmptyArchive: true
+    }
+  }
+}

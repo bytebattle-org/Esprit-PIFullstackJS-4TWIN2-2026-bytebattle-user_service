@@ -1,0 +1,67 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  parameters {
+    string(name: 'IMAGE_TAG', defaultValue: '', description: 'Docker image tag to publish')
+    string(name: 'DEPLOY_JOB_NAME', defaultValue: '', description: 'Optional deploy job to trigger after push')
+    string(name: 'SOURCE_GIT_COMMIT', defaultValue: '', description: 'Propagated from CI')
+    string(name: 'SOURCE_BRANCH', defaultValue: 'main', description: 'Propagated from CI')
+  }
+
+  environment {
+    SERVICE_DIR = 'user-service'
+    IMAGE_REPO = 'ahmedkalboussi/bytebattle-user-service'
+    DOCKERHUB_CREDENTIALS = 'docker-hub'
+  }
+
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+
+    stage('Resolve Tag') {
+      steps {
+        script {
+          env.RESOLVED_IMAGE_TAG = params.IMAGE_TAG?.trim() ? params.IMAGE_TAG.trim() : env.BUILD_NUMBER
+        }
+      }
+    }
+
+    stage('Docker Build & Push') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: env.DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_TOKEN')]) {
+          dir(env.SERVICE_DIR) {
+            sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+
+docker build -t ${IMAGE_REPO}:${RESOLVED_IMAGE_TAG} -t ${IMAGE_REPO}:latest .
+docker push ${IMAGE_REPO}:${RESOLVED_IMAGE_TAG}
+docker push ${IMAGE_REPO}:latest
+
+docker logout || true
+'''
+          }
+        }
+      }
+    }
+
+    stage('Trigger Deploy') {
+      when { expression { params.DEPLOY_JOB_NAME?.trim() } }
+      steps {
+        build job: params.DEPLOY_JOB_NAME,
+          wait: false,
+          parameters: [
+            string(name: 'IMAGE_REPO', value: env.IMAGE_REPO),
+            string(name: 'IMAGE_TAG', value: env.RESOLVED_IMAGE_TAG),
+            string(name: 'SERVICE_NAME', value: 'user-service')
+          ]
+      }
+    }
+  }
+}
