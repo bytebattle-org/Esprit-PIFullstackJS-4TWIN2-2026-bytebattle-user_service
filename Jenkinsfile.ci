@@ -35,7 +35,7 @@ pipeline {
     stage('Install') {
       steps {
         dir(env.WORK_DIR) {
-          sh 'if [ -f package-lock.json ]; then npm ci; else npm install; fi'
+          sh 'if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi'
         }
       }
     }

@@ -18,6 +18,7 @@ pipeline {
     SERVICE_DIR = 'user-service'
     IMAGE_REPO = 'ahmedkalboussi/bytebattle-user-service'
     DOCKERHUB_CREDENTIALS = 'docker-hub'
+    WORK_DIR = '.'
   }
 
   stages {
@@ -31,10 +32,19 @@ pipeline {
       }
     }
 
+    stage('Resolve Working Directory') {
+      steps {
+        script {
+          env.WORK_DIR = fileExists("${env.SERVICE_DIR}/Dockerfile") ? env.SERVICE_DIR : '.'
+          echo "Using WORK_DIR=${env.WORK_DIR}"
+        }
+      }
+    }
+
     stage('Docker Build & Push') {
       steps {
         withCredentials([usernamePassword(credentialsId: env.DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_TOKEN')]) {
-          dir(env.SERVICE_DIR) {
+          dir(env.WORK_DIR) {
             sh '''#!/usr/bin/env bash
 set -euo pipefail
 
