@@ -224,17 +224,20 @@ export class AuthService {
     const users = await this.userModel.find({
       passwordResetExpires: { $gt: new Date() },
     });
+    const now = new Date();
 
     let matchedUser: UserDocument | null = null;
 
     // Check token against all users with valid expiry
     for (const user of users) {
-      if (user.passwordResetToken) {
-        const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
-        if (isTokenValid) {
-          matchedUser = user;
-          break;
-        }
+      if (!user.passwordResetToken || !user.passwordResetExpires || user.passwordResetExpires <= now) {
+        continue;
+      }
+
+      const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
+      if (isTokenValid) {
+        matchedUser = user;
+        break;
       }
     }
 
@@ -259,13 +262,16 @@ export class AuthService {
     const users = await this.userModel.find({
       passwordResetExpires: { $gt: new Date() },
     });
+    const now = new Date();
 
     for (const user of users) {
-      if (user.passwordResetToken) {
-        const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
-        if (isTokenValid) {
-          return { valid: true, email: user.email };
-        }
+      if (!user.passwordResetToken || !user.passwordResetExpires || user.passwordResetExpires <= now) {
+        continue;
+      }
+
+      const isTokenValid = await bcrypt.compare(token, user.passwordResetToken);
+      if (isTokenValid) {
+        return { valid: true, email: user.email };
       }
     }
 

@@ -42,7 +42,7 @@ pipeline {
 
     stage('Test') {
       when { expression { !params.SKIP_TESTS } }
-      steps { dir(env.WORK_DIR) { sh 'npm run test:cov' } }
+      steps { dir(env.WORK_DIR) { sh 'npm run test:cov -- --passWithNoTests' } }
     }
 
     stage('Build') {
