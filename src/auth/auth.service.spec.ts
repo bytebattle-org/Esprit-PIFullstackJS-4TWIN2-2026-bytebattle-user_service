@@ -190,9 +190,14 @@ describe('AuthService', () => {
 
       const result = await service.login(user);
 
-      expect(result.accessToken).toBe('access-token');
-      expect(result.refreshToken).toBe('refresh-token');
-      expect(result.user).toBeDefined();
+      // Type guard: check if result has accessToken (not 2FA response)
+      if ('accessToken' in result) {
+        expect(result.accessToken).toBe('access-token');
+        expect(result.refreshToken).toBe('refresh-token');
+        expect(result.user).toBeDefined();
+      } else {
+        fail('Expected login result with tokens, got 2FA response');
+      }
       expect(mockRabbitMQService.emitUserLoggedIn).toHaveBeenCalled();
     });
 
@@ -201,9 +206,14 @@ describe('AuthService', () => {
 
       const result = await service.login(user);
 
-      expect(result.requiresTwoFactor).toBe(true);
-      expect(result.userId).toBe('user123');
-      expect(result.accessToken).toBeUndefined();
+      // Type guard: check if result requires 2FA
+      if ('requiresTwoFactor' in result) {
+        expect(result.requiresTwoFactor).toBe(true);
+        expect(result.userId).toBe('user123');
+        expect('accessToken' in result).toBe(false);
+      } else {
+        fail('Expected 2FA response, got login result with tokens');
+      }
     });
   });
 
