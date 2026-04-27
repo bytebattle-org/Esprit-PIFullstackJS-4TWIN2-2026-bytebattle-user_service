@@ -330,7 +330,8 @@ describe('AuthService', () => {
         passwordResetExpires: pastDate,
       };
 
-      mockUserModel.find.mockResolvedValue([user]);
+      // Mock find to return empty array (expired tokens are filtered out by query)
+      mockUserModel.find.mockResolvedValue([]);
 
       await expect(service.resetPassword('token', 'newPassword123'))
         .rejects.toThrow(BadRequestException);

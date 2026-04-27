@@ -57,19 +57,20 @@ describe('UsersService', () => {
     save: jest.fn().mockResolvedValue(this),
   };
 
-  const mockUserModel = {
-    findOne: jest.fn(),
-    findById: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    findByIdAndDelete: jest.fn(),
-    find: jest.fn(),
-    countDocuments: jest.fn(),
-    new: jest.fn(),
-    constructor: jest.fn(),
-    create: jest.fn(),
-    save: jest.fn(),
-    exec: jest.fn(),
-  };
+  const mockUserModel = jest.fn().mockImplementation((dto) => ({
+    ...dto,
+    _id: 'user123',
+    save: jest.fn().mockResolvedValue({ ...mockUser, ...dto, _id: 'user123' }),
+  }));
+  
+  mockUserModel.findOne = jest.fn();
+  mockUserModel.findById = jest.fn();
+  mockUserModel.findByIdAndUpdate = jest.fn();
+  mockUserModel.findByIdAndDelete = jest.fn();
+  mockUserModel.find = jest.fn();
+  mockUserModel.countDocuments = jest.fn();
+  mockUserModel.create = jest.fn();
+  mockUserModel.exec = jest.fn();
 
   const mockDailyChallengeModel = {
     findOne: jest.fn(),
@@ -78,9 +79,9 @@ describe('UsersService', () => {
   };
 
   const mockEmailService = {
-    sendVerificationEmail: jest.fn(),
-    sendWelcomeEmail: jest.fn(),
-    sendPasswordResetEmail: jest.fn(),
+    sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+    sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
+    sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockRabbitMQService = {
@@ -136,17 +137,10 @@ describe('UsersService', () => {
       mockUserModel.findOne.mockResolvedValue(null);
       bcrypt.hash.mockResolvedValue('hashedPassword');
 
-      const newUser = {
-        ...mockUser,
-        ...createUserDto,
-        save: jest.fn().mockResolvedValue(mockUser),
-      };
-
-      mockUserModel.mockImplementation(() => newUser);
-
       const result = await service.create(createUserDto);
 
       expect(result).toBeDefined();
+      expect(mockUserModel).toHaveBeenCalled();
       expect(mockRabbitMQService.emitUserCreated).toHaveBeenCalled();
     });
 
