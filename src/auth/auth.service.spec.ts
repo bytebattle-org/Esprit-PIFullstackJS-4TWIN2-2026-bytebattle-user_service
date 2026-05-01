@@ -162,6 +162,19 @@ describe('AuthService', () => {
         .rejects.toThrow(UnauthorizedException);
     });
 
+    it('should throw UnauthorizedException for OAuth-only account without password hash', async () => {
+      const oauthUser = {
+        ...mockUser,
+        passwordHash: undefined,
+        provider: 'google',
+      };
+      mockUserModel.findOne.mockResolvedValue(oauthUser);
+
+      await expect(service.validateUser('test@example.com', 'password123'))
+        .rejects.toThrow(UnauthorizedException);
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+    });
+
     it('should throw BadRequestException if email not verified', async () => {
       const unverifiedUser = { ...mockUser, isEmailVerified: false };
       mockUserModel.findOne.mockResolvedValue(unverifiedUser);
@@ -195,6 +208,24 @@ describe('AuthService', () => {
         expect(result.accessToken).toBe('access-token');
         expect(result.refreshToken).toBe('refresh-token');
         expect(result.user).toBeDefined();
+      } else {
+        fail('Expected login result with tokens, got 2FA response');
+      }
+      expect(mockRabbitMQService.emitUserLoggedIn).toHaveBeenCalled();
+    });
+
+    it('should still return tokens if RabbitMQ emit fails', async () => {
+      const user = { ...mockUser, isTwoFactorEnabled: false };
+      mockJwtService.sign.mockReturnValueOnce('access-token').mockReturnValueOnce('refresh-token');
+      bcrypt.hash.mockResolvedValue('hashed-refresh-token');
+      mockUserModel.findByIdAndUpdate.mockResolvedValue(user);
+      mockRabbitMQService.emitUserLoggedIn.mockRejectedValue(new Error('rabbitmq unavailable'));
+
+      const result = await service.login(user);
+
+      if ('accessToken' in result) {
+        expect(result.accessToken).toBe('access-token');
+        expect(result.refreshToken).toBe('refresh-token');
       } else {
         fail('Expected login result with tokens, got 2FA response');
       }

@@ -27,7 +27,24 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    // OAuth-only accounts can exist without a password hash.
+    // Treat as invalid password login instead of bubbling a bcrypt runtime error.
+    if (!user.passwordHash) {
+      if (user.provider) {
+        throw new UnauthorizedException(
+          `This account uses ${user.provider} login. Please use ${user.provider} sign-in.`,
+        );
+      }
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    let isPasswordValid = false;
+    try {
+      isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    } catch (error) {
+      this.logger.warn(`Password validation failed for ${email}: ${String(error)}`);
+      throw new UnauthorizedException('Invalid credentials');
+    }
     
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -56,13 +73,20 @@ export class AuthService {
     }
 
     // 📢 Emit user.logged_in event
-    await this.rabbitMQService.emitUserLoggedIn({
-      userId: user._id.toString(),
-      username: user.username,
-      email: user.email,
-    });
+    try {
+      await this.rabbitMQService.emitUserLoggedIn({
+        userId: user._id.toString(),
+        username: user.username,
+        email: user.email,
+      });
 
-    this.logger.log(`📢 User logged in event emitted for ${user.username}`);
+      this.logger.log(`📢 User logged in event emitted for ${user.username}`);
+    } catch (error) {
+      // Eventing must not block authentication.
+      this.logger.warn(
+        `Failed to emit user logged in event for ${user.username}: ${String(error)}`,
+      );
+    }
 
     return this.generateTokens(user);
   }
