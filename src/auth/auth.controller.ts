@@ -78,6 +78,15 @@ export class AuthController {
     return this.authService.forgotPassword(email);
   }
 
+  @Get('health')
+  async health() {
+    return { 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      service: 'user-service-auth'
+    };
+  }
+
   @Post('reset-password')
   async resetPassword(
     @Body('token') token: string,
