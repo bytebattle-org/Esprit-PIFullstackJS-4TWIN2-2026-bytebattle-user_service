@@ -26,7 +26,7 @@ pipeline {
     K8S_DEPLOYMENT = 'user-service'
     K8S_CONTAINER = 'user-service'
     K8S_MASTER_HOST = '64.227.22.133'
-    K8S_ROLLOUT_TIMEOUT = '300s'
+    K8S_ROLLOUT_TIMEOUT = '600s'
     WORK_DIR = '.'
   }
 
@@ -117,22 +117,61 @@ ssh ${SSH_OPTS} "${SSH_TARGET}" "rm -rf ${REMOTE_DIR} && mkdir -p ${REMOTE_DIR}"
 # Step 2: copy manifest to remote
 scp ${SSH_OPTS} "${K8S_MANIFEST}" "${SSH_TARGET}:${REMOTE_DIR}/"
 
-# Step 3: apply manifest and update image
-ssh ${SSH_OPTS} "${SSH_TARGET}" "
-  set -euo pipefail
-  echo \"[INFO] Applying manifest on ${K8S_MASTER_HOST}\"
-  kubectl apply -f ${REMOTE_DIR}/$(basename ${K8S_MANIFEST})
-  
-  echo \"[INFO] Updating deployment image\"
-  kubectl -n ${K8S_NAMESPACE} set image deployment/${K8S_DEPLOYMENT} \\
-    ${K8S_CONTAINER}=${IMAGE_REPO}:${RESOLVED_IMAGE_TAG} --record
-  
-  echo \"[INFO] Waiting for rollout\"
-  kubectl -n ${K8S_NAMESPACE} rollout status deployment/${K8S_DEPLOYMENT} \\
-    --timeout=${K8S_ROLLOUT_TIMEOUT} || exit 1
-  
-  rm -rf ${REMOTE_DIR}
-"
+# Step 3: apply manifest, then update image
+MANIFEST_BASENAME="$(basename "${K8S_MANIFEST}")"
+
+ssh ${SSH_OPTS} "${SSH_TARGET}" \
+  "K8S_NAMESPACE='${K8S_NAMESPACE}' K8S_DEPLOYMENT='${K8S_DEPLOYMENT}' K8S_CONTAINER='${K8S_CONTAINER}' IMAGE_REPO='${IMAGE_REPO}' RESOLVED_IMAGE_TAG='${RESOLVED_IMAGE_TAG}' K8S_ROLLOUT_TIMEOUT='${K8S_ROLLOUT_TIMEOUT}' REMOTE_DIR='${REMOTE_DIR}' K8S_MASTER_HOST='${K8S_MASTER_HOST}' MANIFEST_BASENAME='${MANIFEST_BASENAME}' bash -s" <<'EOF'
+set -euo pipefail
+trap 'rm -rf "${REMOTE_DIR}"' EXIT
+
+collect_diagnostics() {
+  echo "[DIAG] Deployment summary"
+  kubectl -n ${K8S_NAMESPACE} get deployment ${K8S_DEPLOYMENT} -o wide || true
+
+  echo "[DIAG] ReplicaSets"
+  kubectl -n ${K8S_NAMESPACE} get rs -l app=${K8S_DEPLOYMENT} || true
+
+  echo "[DIAG] Pods"
+  kubectl -n ${K8S_NAMESPACE} get pods -l app=${K8S_DEPLOYMENT} -o wide || true
+
+  echo "[DIAG] Deployment describe"
+  kubectl -n ${K8S_NAMESPACE} describe deployment ${K8S_DEPLOYMENT} || true
+
+  kubectl -n ${K8S_NAMESPACE} get pods -l app=${K8S_DEPLOYMENT} -o name 2>/dev/null | \
+    xargs -r -I{} sh -c '
+      echo "[DIAG] Describe {}"
+      kubectl -n "${K8S_NAMESPACE}" describe "{}" || true
+
+      echo "[DIAG] Current logs for {} (all containers)"
+      kubectl -n "${K8S_NAMESPACE}" logs "{}" --all-containers=true --tail=200 || true
+
+      echo "[DIAG] Previous logs for {} (all containers)"
+      kubectl -n "${K8S_NAMESPACE}" logs "{}" --all-containers=true --previous --tail=200 || true
+    '
+
+  echo "[DIAG] Recent namespace events"
+  kubectl -n ${K8S_NAMESPACE} get events --sort-by=.metadata.creationTimestamp | tail -n 100 || true
+}
+
+echo "[INFO] Applying manifest on ${K8S_MASTER_HOST}"
+kubectl apply -f "${REMOTE_DIR}/${MANIFEST_BASENAME}"
+
+echo "[INFO] Removing master-only node selector"
+kubectl -n ${K8S_NAMESPACE} patch deployment/${K8S_DEPLOYMENT} --type merge -p '{"spec":{"template":{"spec":{"nodeSelector":null}}}}'
+
+echo "[INFO] Updating deployment image"
+kubectl -n ${K8S_NAMESPACE} set image deployment/${K8S_DEPLOYMENT} \
+  ${K8S_CONTAINER}=${IMAGE_REPO}:${RESOLVED_IMAGE_TAG}
+
+echo "[INFO] Waiting for rollout"
+if ! kubectl -n ${K8S_NAMESPACE} rollout status deployment/${K8S_DEPLOYMENT} \
+  --timeout=${K8S_ROLLOUT_TIMEOUT}; then
+  echo "[ERROR] Rollout timeout for deployment/${K8S_DEPLOYMENT}. Collecting diagnostics..."
+  collect_diagnostics
+  exit 1
+fi
+EOF
 '''
           }
         }
