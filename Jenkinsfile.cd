@@ -18,6 +18,14 @@ pipeline {
     SERVICE_DIR = 'user-service'
     IMAGE_REPO = 'ahmedkalboussi/bytebattle-user-service'
     DOCKERHUB_CREDENTIALS = 'docker-hub'
+    K8S_SSH_CREDENTIALS = 'root'
+    K8S_MANIFEST_DIR = 'k8s'
+    K8S_MANIFEST = 'k8s/user-service.yaml'
+    K8S_NAMESPACE = 'app'
+    K8S_DEPLOYMENT = 'user-service'
+    K8S_CONTAINER = 'user-service'
+    K8S_MASTER_HOST = '64.227.22.133'
+    K8S_ROLLOUT_TIMEOUT = '300s'
     WORK_DIR = '.'
   }
 
@@ -71,6 +79,50 @@ docker logout || true
             string(name: 'IMAGE_TAG', value: env.RESOLVED_IMAGE_TAG),
             string(name: 'SERVICE_NAME', value: 'user-service')
           ]
+      }
+    }
+    stage('Deploy to Kubernetes') {
+      when { expression { !params.DEPLOY_JOB_NAME?.trim() } }
+      steps {
+        withCredentials([sshUserPrivateKey(credentialsId: env.K8S_SSH_CREDENTIALS, keyFileVariable: 'K8S_SSH_KEY', usernameVariable: 'SSH_USER')]) {
+          sh '''#!/usr/bin/env bash
+set -euo pipefail
+
+REMOTE_DIR="/tmp/bytebattle-${SERVICE_DIR}-${BUILD_NUMBER}"
+SSH_TARGET="${SSH_USER}@${K8S_MASTER_HOST}"
+SSH_OPTS="-i ${K8S_SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+echo "[INFO] Deploying ${SERVICE_DIR} to Kubernetes"
+
+if [[ ! -f "${K8S_MANIFEST}" ]]; then
+  echo "[ERROR] Missing Kubernetes manifest: ${K8S_MANIFEST}"
+  exit 1
+fi
+
+# Step 1: create remote working directory
+ssh ${SSH_OPTS} "${SSH_TARGET}" "rm -rf ${REMOTE_DIR} && mkdir -p ${REMOTE_DIR}"
+
+# Step 2: copy manifest to remote
+scp ${SSH_OPTS} "${K8S_MANIFEST}" "${SSH_TARGET}:${REMOTE_DIR}/"
+
+# Step 3: apply manifest and update image
+ssh ${SSH_OPTS} "${SSH_TARGET}" "
+  set -euo pipefail
+  echo \"[INFO] Applying manifest on ${K8S_MASTER_HOST}\"
+  kubectl apply -f ${REMOTE_DIR}/$(basename ${K8S_MANIFEST})
+  
+  echo \"[INFO] Updating deployment image\"
+  kubectl -n ${K8S_NAMESPACE} set image deployment/${K8S_DEPLOYMENT} \\
+    ${K8S_CONTAINER}=${IMAGE_REPO}:${RESOLVED_IMAGE_TAG} --record
+  
+  echo \"[INFO] Waiting for rollout\"
+  kubectl -n ${K8S_NAMESPACE} rollout status deployment/${K8S_DEPLOYMENT} \\
+    --timeout=${K8S_ROLLOUT_TIMEOUT} || exit 1
+  
+  rm -rf ${REMOTE_DIR}
+"
+'''
+        }
       }
     }
   }
