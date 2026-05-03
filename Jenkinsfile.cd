@@ -18,7 +18,7 @@ pipeline {
     SERVICE_DIR = 'user-service'
     IMAGE_REPO = 'ahmedkalboussi/bytebattle-user-service'
     DOCKERHUB_CREDENTIALS = 'docker-hub'
-    K8S_SSH_CREDENTIALS = 'root'
+    K8S_SSH_CREDENTIALS = 'k8s-master-key'
     K8S_MANIFEST_DIR = 'k8s'
     K8S_MANIFEST = 'k8s/user-service.yaml'
     K8S_NAMESPACE = 'app'
