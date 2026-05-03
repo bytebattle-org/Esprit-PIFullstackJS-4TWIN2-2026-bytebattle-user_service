@@ -18,9 +18,10 @@ pipeline {
     SERVICE_DIR = 'user-service'
     IMAGE_REPO = 'ahmedkalboussi/bytebattle-user-service'
     DOCKERHUB_CREDENTIALS = 'docker-hub'
+    GIT_CREDENTIALS = 'github-token'
     K8S_SSH_CREDENTIALS = 'k8s-master-key'
-    K8S_MANIFEST_DIR = 'k8s'
-    K8S_MANIFEST = 'k8s/user-service.yaml'
+    K8S_MANIFESTS_REPO = 'https://github.com/bytebattle-org/Esprit-PIFullstackJS-4TWIN2-2026-bytebattle-K8S.git'
+    K8S_MANIFEST = 'user-service.yaml'
     K8S_NAMESPACE = 'app'
     K8S_DEPLOYMENT = 'user-service'
     K8S_CONTAINER = 'user-service'
@@ -85,7 +86,16 @@ docker logout || true
       when { expression { !params.DEPLOY_JOB_NAME?.trim() } }
       steps {
         withCredentials([sshUserPrivateKey(credentialsId: env.K8S_SSH_CREDENTIALS, keyFileVariable: 'K8S_SSH_KEY', usernameVariable: 'SSH_USER')]) {
-          sh '''#!/usr/bin/env bash
+          dir('k8s-manifests') {
+            deleteDir()
+            withCredentials([usernamePassword(credentialsId: env.GIT_CREDENTIALS, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+              script {
+                def authedRepo = env.K8S_MANIFESTS_REPO.replace('https://', "https://${env.GIT_USER}:${env.GIT_TOKEN}@")
+                git url: authedRepo, branch: 'main'
+              }
+            }
+
+            sh '''#!/usr/bin/env bash
 set -euo pipefail
 
 REMOTE_DIR="/tmp/bytebattle-${SERVICE_DIR}-${BUILD_NUMBER}"
@@ -93,9 +103,11 @@ SSH_TARGET="${SSH_USER}@${K8S_MASTER_HOST}"
 SSH_OPTS="-i ${K8S_SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 echo "[INFO] Deploying ${SERVICE_DIR} to Kubernetes"
+echo "[INFO] Pulled manifests repo commit: $(git rev-parse --short HEAD)"
 
 if [[ ! -f "${K8S_MANIFEST}" ]]; then
-  echo "[ERROR] Missing Kubernetes manifest: ${K8S_MANIFEST}"
+  echo "[ERROR] Missing Kubernetes manifest in pulled repo: ${K8S_MANIFEST}"
+  ls -la
   exit 1
 fi
 
@@ -122,6 +134,7 @@ ssh ${SSH_OPTS} "${SSH_TARGET}" "
   rm -rf ${REMOTE_DIR}
 "
 '''
+          }
         }
       }
     }
