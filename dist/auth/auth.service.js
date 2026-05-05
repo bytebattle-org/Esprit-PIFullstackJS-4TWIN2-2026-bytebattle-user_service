@@ -75,7 +75,20 @@ let AuthService = AuthService_1 = class AuthService {
         if (!user) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+        if (!user.passwordHash) {
+            if (user.provider) {
+                throw new common_1.UnauthorizedException(`This account uses ${user.provider} login. Please use ${user.provider} sign-in.`);
+            }
+            throw new common_1.UnauthorizedException('Invalid credentials');
+        }
+        let isPasswordValid = false;
+        try {
+            isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+        }
+        catch (error) {
+            this.logger.warn(`Password validation failed for ${email}: ${String(error)}`);
+            throw new common_1.UnauthorizedException('Invalid credentials');
+        }
         if (!isPasswordValid) {
             throw new common_1.UnauthorizedException('Invalid credentials');
         }
@@ -96,12 +109,17 @@ let AuthService = AuthService_1 = class AuthService {
                 message: 'Please enter your 2FA code',
             };
         }
-        await this.rabbitMQService.emitUserLoggedIn({
-            userId: user._id.toString(),
-            username: user.username,
-            email: user.email,
-        });
-        this.logger.log(`📢 User logged in event emitted for ${user.username}`);
+        try {
+            await this.rabbitMQService.emitUserLoggedIn({
+                userId: user._id.toString(),
+                username: user.username,
+                email: user.email,
+            });
+            this.logger.log(`📢 User logged in event emitted for ${user.username}`);
+        }
+        catch (error) {
+            this.logger.warn(`Failed to emit user logged in event for ${user.username}: ${String(error)}`);
+        }
         return this.generateTokens(user);
     }
     async loginWith2FA(userId) {
