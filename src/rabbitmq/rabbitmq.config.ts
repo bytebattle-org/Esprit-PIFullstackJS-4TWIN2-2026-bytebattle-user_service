@@ -1,5 +1,5 @@
 export const RABBITMQ_CONFIG = {
-  url: process.env.RABBITMQ_URL || '##########',
+  url: process.env.RABBITMQ_URL,
   exchanges: {
     EVENTS: 'bytebattle.events',
   },
