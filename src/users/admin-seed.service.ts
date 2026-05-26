@@ -23,9 +23,9 @@ export class AdminSeedService implements OnModuleInit {
       return;
     }
 
-    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@bytebattle.com');
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', '*****************');
     const adminUsername = this.configService.get<string>('ADMIN_USERNAME', 'admin');
-    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD', 'Admin@12345');
+    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD', '**************');
     const syncPassword = (this.configService.get<string>('ADMIN_SEED_SYNC_PASSWORD', 'true') || 'true')
       .toLowerCase() === 'true';
 
