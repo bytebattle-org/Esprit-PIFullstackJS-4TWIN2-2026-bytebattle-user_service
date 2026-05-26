@@ -35,8 +35,7 @@ export class UsersController {
     private readonly configService: ConfigService,
   ) {
     this.internalApiKey =
-      this.configService.get<string>('INTERNAL_API_KEY') ||
-      'bytebattle-internal-key';
+      this.configService.get<string>('INTERNAL_API_KEY');
   }
 
   // ── Public routes (no auth required) ──────────────────────────────────────
